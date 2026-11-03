@@ -1,0 +1,95 @@
+{
+ "configurations": [
+  {
+   "name": "Claude Sonnet 5.5",
+   "provider": "Anthropic",
+   "model": "claude-sonnet-5-5",
+   "extra_body": {},
+   "samples": 3,
+   "api_key_env": "LLMDW_API_KEY_ANTHROPIC",
+   "base_url_env": "LLMDW_BASE_URL_ANTHROPIC",
+   "streaming": false,
+   "json_mode": true,
+   "temperature": null,
+   "timeout_s": 1800,
+   "completion_limit": null,
+   "prompt_tokens_per_char": 0.65,
+   "require_reasoning": true,
+   "inflation_mode": "stop"
+  },
+  {
+   "name": "GPT-6.1 Sol",
+   "provider": "OpenAI",
+   "model": "gpt-6.1-sol",
+   "extra_body": {
+    "reasoning_effort": "medium"
+   },
+   "samples": 3,
+   "api_key_env": "LLMDW_API_KEY_OPENAI",
+   "base_url_env": "LLMDW_BASE_URL_OPENAI",
+   "streaming": true,
+   "json_mode": true,
+   "temperature": null,
+   "timeout_s": 1800,
+   "completion_limit": null,
+   "prompt_tokens_per_char": 0.45,
+   "require_reasoning": true,
+   "inflation_mode": "retry"
+  },
+  {
+   "name": "Grok 4.20 (Reasoning)",
+   "provider": "xAI",
+   "model": "grok-4-20-reasoning",
+   "extra_body": {},
+   "samples": 3,
+   "api_key_env": "LLMDW_API_KEY_XAI",
+   "base_url_env": "LLMDW_BASE_URL_XAI",
+   "streaming": true,
+   "json_mode": true,
+   "temperature": null,
+   "timeout_s": 1800,
+   "completion_limit": null,
+   "prompt_tokens_per_char": 0.45,
+   "require_reasoning": true,
+   "inflation_mode": "retry"
+  },
+  {
+   "name": "Grok 4.20 (Non-Reasoning)",
+   "provider": "xAI",
+   "model": "grok-4-20-non-reasoning",
+   "extra_body": {},
+   "samples": 3,
+   "api_key_env": "LLMDW_API_KEY_XAI",
+   "base_url_env": "LLMDW_BASE_URL_XAI",
+   "streaming": true,
+   "json_mode": true,
+   "temperature": null,
+   "timeout_s": 1800,
+   "completion_limit": null,
+   "prompt_tokens_per_char": 0.45,
+   "require_reasoning": false,
+   "inflation_mode": "retry"
+  },
+  {
+   "name": "DeepSeek-V4-Pro (Non-Thinking)",
+   "provider": "DeepSeek",
+   "model": "deepseek-v4-pro",
+   "extra_body": {
+    "thinking": {
+     "type": "disabled"
+    }
+   },
+   "samples": 3,
+   "api_key_env": "LLMDW_API_KEY_DEEPSEEK",
+   "base_url_env": "LLMDW_BASE_URL_DEEPSEEK",
+   "streaming": true,
+   "json_mode": true,
+   "temperature": null,
+   "timeout_s": 600,
+   "completion_limit": null,
+   "prompt_tokens_per_char": 0.45,
+   "require_reasoning": false,
+   "inflation_mode": "stop"
+  }
+ ]
+}

@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llmdw"
+version = "1.0.0"
+description = "Zero-marginal groups in Dantzig-Wolfe reformulation: exact gains, the lookahead, JointDW and language-model predictions"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.13"
+authors = [
+  {name = "Junbo Jacob Lian"},
+  {name = "Kaixuan Chen"},
+  {name = "Hanzhang Qin"},
+  {name = "Huiling Chen"},
+  {name = "Chung-Piaw Teo"},
+]
+dependencies = [
+  "numpy==2.5.4",
+]
+
+[project.optional-dependencies]
+solvers = [
+  "highspy==1.15.1",
+  "python-flint==0.9.0",
+  "sympy==1.14.0",
+  "pyscipopt==6.0.0",
+  "pygcgopt==1.0.0b0",
+  "gurobipy==13.0.3",
+  "pandas==2.2.3",
+]
+test = [
+  "pytest==9.2.0",
+  "llmdw[solvers]",
+]
+
+[tool.setuptools.packages.find]
+include = ["llmdw*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

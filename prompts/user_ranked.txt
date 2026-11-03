@@ -1,0 +1,48 @@
+## Task
+The mixed-integer linear program (MILP) below is correct as given. You receive its natural-language description and formulation when available, and the constraint families and variable families of the solver model. Answer three questions about its constraint families, then propose Dantzig-Wolfe (DW) reformulations.
+
+Definitions. Convexifying a set T of constraint families means replacing the LP relaxation by its intersection with the convex hull of the integer points that satisfy the constraints of T (with the variable bounds and integrality). This is the bound of a DW reformulation whose blocks are the constraints of T.
+1. A family "strengthens alone" if convexifying that family by itself gives a bound strictly better than the LP relaxation for this model and objective.
+2. A "joint support" is a set of two or more families that together strengthen the bound while no proper subset of them does: some valid inequalities that cut off LP solutions can only be derived from all of these families together.
+3. A family "has the integrality property" if convexifying it alone can never improve on the LP relaxation, for any objective.
+
+A reformulation is specified by `master_constraint_families` (kept in the master) and `linking_variable_families` (variable families copied into each block, with the copies equated in the master; leave empty unless intended). Every constraint not in the master is convexified; two constraints are in the same block when they share a variable that is not a linking variable; each block is a pricing problem solved by a MIP solver at every column-generation iteration, so a block that contains most of the model is as hard as the model itself. Proposals are solved at the root node without cutting planes with a time limit of {time_limit} seconds and scored by the dual bound at the end of the root node.
+
+## Problem description
+{description}
+
+## Formulation
+{formulation}
+
+## Model statistics
+rows {num_rows}, columns {num_columns}, objective: {sense}
+
+## Constraint families
+Columns: family | rows | sense counts | MIPLIB constraint types | row length min/median/max | variable families touched (nonzeros) | all coefficients equal to 1
+{constraint_table}
+
+## Variable families
+Columns: family | columns | types (B binary, I integer, C continuous) | columns with nonzero objective coefficient
+{variable_table}
+{feedback}
+## Output
+Return only a JSON object of this form:
+{{
+ "families": {{"<constraint family>": {{"integrality_property": "has | lacks | unclear", "strengthens_alone": "yes | no | unclear"}}}},
+ "joint_supports": [
+  {{"families": ["...", "..."], "inequality_class": "<name of the valid inequalities they generate, or 'unknown'>", "reason": "<at most 40 words>"}}
+ ],
+ "ranked_groups": [
+  {{"families": ["...", "..."], "probability": 0.0}}
+ ],
+ "relevant_families": ["..."],
+ "assessment": "<at most 100 words>",
+ "decompose": true,
+ "candidates": [
+  {{"master_constraint_families": ["..."],
+    "linking_variable_families": [],
+    "block_problem": "<one pricing problem, in words>",
+    "expected_pricing_difficulty": "easy | moderate | hard"}}
+ ]
+}}
+List every constraint family under "families". List joint supports most important first (an empty list if you expect none). Under "ranked_groups", list up to 5 different sets of constraint families, most likely first: each set is your guess for the smallest set of families whose convexification gives the best bound of any family-level DW reformulation of this model, and "probability" is your probability that it is that set. Under "relevant_families", list the constraint families that you expect the smallest best set to contain; list more families rather than fewer when unsure. Give up to {k} candidates, best first, all different. Set "decompose" to false if you expect that no reformulation will beat the LP bound within the time limit; still list your best candidates. Use family names exactly as listed (a variable family written as `name:B`, `name:I` or `name:C` contains only the binary, integer or continuous columns of that name pattern). Every candidate must leave at least one constraint family out of the master, and must either keep at least one constraint family in the master or name at least one linking variable family.
