@@ -90,7 +90,7 @@ The data are an asset of the release [v1.0](https://github.com/junbolian/JointDW
 scripts/fetch_data.sh
 ```
 
-downloads the archive into `data/`, checks its SHA-256 and unpacks it. [DATA.md](DATA.md) describes every part of the data, how it was produced and its license. The MPS files of the MIPLIB-NL models are not part of the release; [Building instances](#building-instances) shows how to export them from MIPLIB-NL.
+downloads the data into `data/`. [DATA.md](DATA.md) describes every part of the data, how it was produced and its license. The MPS files of the MIPLIB-NL models are not part of the release; [Building instances](#building-instances) shows how to export them from MIPLIB-NL.
 
 ## Reproducing the paper
 
