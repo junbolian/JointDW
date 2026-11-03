@@ -12,6 +12,9 @@ authors:
     given-names: Hanzhang
   - family-names: Chen
     given-names: Huiling
+  - family-names: Zhang
+    given-names: Chaoyu
+    affiliation: "City University of Hong Kong"
   - family-names: Teo
     given-names: Chung-Piaw
 preferred-citation:
@@ -26,6 +29,9 @@ preferred-citation:
       given-names: Hanzhang
     - family-names: Chen
       given-names: Huiling
+    - family-names: Zhang
+      given-names: Chaoyu
+      affiliation: "City University of Hong Kong"
     - family-names: Teo
       given-names: Chung-Piaw
   year: 2026
