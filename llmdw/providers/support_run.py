@@ -59,15 +59,30 @@ def result_path(out: Path, name: str, cond: str, sample: int) -> Path:
 
 def run_instance(llm, name: str, mps: str, instance_dir: str | None, conditions: list, out: Path,
                  k: int = 3, time_limit: float = 120.0, seed: int = 0, samples: int = 1,
-                 should_stop=None, prompt_version: str = "v2", tag_prefix: str = "support", log=None) -> list:
+                 should_stop=None, prompt_version: str = "v2", tag_prefix: str = "support", log=None,
+                 labels: str = "fixed") -> list:
     """Answers of one instance; files already present are read, not requested. should_stop() is checked before
     every new call, so a stop set by another thread ends this instance at its next call (RunStopped). log, when given,
     receives the INCOMPLETE line of a call without an answer."""
     summary = summarize(read_model(mps))
     results = []
+    groups = []
+    if labels == "per-instance":     # the true joint supports, kept apart by the permuted presentation
+        gt = Path(instance_dir) / "ground_truth.json"
+        groups = json.loads(gt.read_text(encoding="utf-8"))["joint_supports"] if gt.exists() else []
     for cond in conditions:
         if not counterfactual.applicable(summary, cond):
             continue
+        maps = None
+        if labels == "per-instance":
+            maps, used = counterfactual.instance_maps(summary, cond, name, groups)
+            if maps is not None:
+                lp = out / name / "labels.json"
+                lp.parent.mkdir(parents=True, exist_ok=True)
+                rec = json.loads(lp.read_text(encoding="utf-8")) if lp.exists() else {}
+                rec[cond] = {"seed": used, "seed_base": counterfactual.instance_seed(name), "cons": maps["cons"],
+                             "vars": maps["vars"], "groups_kept_apart": groups if cond == "permuted" else []}
+                lp.write_text(json.dumps(rec, indent=1), encoding="utf-8")
         for sample in range(samples):
             path = result_path(out, name, cond, sample)
             if path.exists():
@@ -77,7 +92,7 @@ def run_instance(llm, name: str, mps: str, instance_dir: str | None, conditions:
                 raise RunStopped(name)
             try:
                 res = propose(llm, summary, instance_dir, k, time_limit, prompt_version=prompt_version, condition=cond,
-                              seed=seed, tag=f"{tag_prefix}:{name}:{cond}:s{sample}", sample=sample)
+                              seed=seed, tag=f"{tag_prefix}:{name}:{cond}:s{sample}", sample=sample, maps=maps)
             except (IncompleteResponse, GatewayExhausted) as e:
                 if log is not None:
                     log(f"INCOMPLETE {name} {cond} s{sample}: {e}")
@@ -122,6 +137,8 @@ def main(argv=None):
     ap.add_argument("--out", required=True)
     ap.add_argument("--k", type=int, default=3)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--labels", default="fixed", choices=("fixed", "per-instance"),
+                    help="label rule of the permuted and anonymized presentations (llmdw.prompts.counterfactual)")
     ap.add_argument("--samples", type=int, default=1, help="independent answers per instance and condition")
     ap.add_argument("--parallel", type=int, default=1, help="instances processed at the same time")
     ap.add_argument("--stop-file", action="append", default=[],
@@ -174,7 +191,7 @@ def main(argv=None):
         try:
             recs = run_instance(llm, name, mps, inst, conds, out, args.k, seed=args.seed, samples=args.samples,
                                 should_stop=should_stop, prompt_version=prompt_version, tag_prefix=tag_prefix,
-                                log=lambda line: print(line, flush=True))
+                                log=lambda line: print(line, flush=True), labels=args.labels)
         except RunStopped:
             return f"{name:40s} not finished (run stopped)"
         except BaseException as e:

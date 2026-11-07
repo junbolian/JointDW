@@ -166,10 +166,12 @@ def anonymize_enabled() -> bool:
     return os.environ.get("LLMDW_ANONYMIZE") == "1"
 
 
-def model_lp_text(instance_dir: str) -> str:
+def model_lp_text(instance_dir: str, maps: dict | None = None) -> str:
     """The complete instance (instance_dir/model.mps) in CPLEX LP format, written by SCIP with the model's own row
     and column names (the names behind the constraint and variable families); SCIP's statistics comment, which
-    names the problem, is removed."""
+    names the problem, is removed. With presentation maps (counterfactual.maps_for), every row and column name is
+    renamed to the family name the map gives its family (lp_name_map), so the LP section shows the same names as
+    the tables; coefficients, bounds and the order of rows and columns are unchanged."""
     import tempfile
 
     import pyscipopt
@@ -180,7 +182,40 @@ def model_lp_text(instance_dir: str) -> str:
         path = Path(td) / "model.lp"
         m.writeProblem(str(path), trans=False, verbose=False)
         text = path.read_text(encoding="utf-8")
-    return "\n".join(line for line in text.splitlines() if not line.startswith("\\")).strip("\n")
+    text = "\n".join(line for line in text.splitlines() if not line.startswith("\\")).strip("\n")
+    if maps is None:
+        return text
+    names = lp_name_map(str(Path(instance_dir) / "model.mps"), maps)
+    return re.sub(r"[A-Za-z_][A-Za-z0-9_]*", lambda mm: names.get(mm.group(0), mm.group(0)), text)
+
+
+def _renamed(name: str, family: str, target: str) -> str:
+    """The name of a row or column of `family` (name pattern with # for each number) under the target family name:
+    the numbers of the name in the # positions of the target when the counts agree, otherwise the target without its
+    # positions followed by the numbers."""
+    nums = re.findall(r"\d+", name)
+    pattern = target.split(":")[0]
+    if pattern.count("#") == len(nums):
+        it = iter(nums)
+        return re.sub("#", lambda _: next(it), pattern)
+    base = re.sub(r"_?#", "", pattern).rstrip("_")
+    return "_".join([base] + nums) if nums else base
+
+
+def lp_name_map(mps: str, maps: dict) -> dict:
+    """{original row or column name: name under the presentation maps}, one to one (checked)."""
+    from llmdw.instances.families import family_of, read_model, var_family_map
+
+    model = read_model(mps)
+    out = {}
+    for r in model.rows:
+        f = family_of(r.name)
+        out[r.name] = _renamed(r.name, f, maps["cons"][f])
+    for v, f in var_family_map(model.var_type).items():
+        out[v] = _renamed(v, f.split(":")[0], maps["vars"][f])
+    if len(set(out.values())) != len(out):
+        raise ValueError("renamed rows and columns are not distinct")
+    return out  # one pass over the text replaces every token, so a new name equal to an old one is harmless
 
 
 def build_messages(summary: dict, instance_dir: str | None, k: int, time_limit: float,
@@ -201,7 +236,8 @@ def build_messages(summary: dict, instance_dir: str | None, k: int, time_limit: 
         time_limit=int(time_limit), description=desc, formulation=form,
         num_rows=summary["num_rows"], num_columns=summary["num_columns"], sense=summary["objective_sense"],
         constraint_table=constraint_table(summary), variable_table=variable_table(summary),
-        feedback=feedback, k=k, **({"model_lp": model_lp_text(instance_dir)} if "{model_lp}" in t["USER"] else {}))
+        feedback=feedback, k=k,
+        **({"model_lp": model_lp_text(instance_dir, maps)} if "{model_lp}" in t["USER"] else {}))
     return [{"role": "system", "content": t["SYSTEM"].strip()}, {"role": "user", "content": user}]
 
 
@@ -282,14 +318,17 @@ def validate_supports(answer: dict, summary: dict) -> tuple[list[dict], dict, li
 
 def propose(llm, summary: dict, instance_dir: str | None, k: int, time_limit: float,
             history: list[dict] | None = None, lp_bound: float | None = None, tag: str = "",
-            prompt_version: str = "v2", condition: str | None = None, seed: int = 0, sample: int = 0) -> dict:
+            prompt_version: str = "v2", condition: str | None = None, seed: int = 0, sample: int = 0,
+            maps: dict | None = None) -> dict:
     """One LLM call. Returns {"messages", "response", "answer", "candidates", "problems", "supports",
     "family_info"}. `condition` (counterfactual.CONDITIONS) overrides LLMDW_ANONYMIZE.
-    `sample` >= 1 requests another independent answer to the identical prompt (LLMClient.chat)."""
+    `sample` >= 1 requests another independent answer to the identical prompt (LLMClient.chat). `maps` replaces the
+    maps of counterfactual.maps_for (the per-instance label rule, counterfactual.instance_maps)."""
     from llmdw.prompts import counterfactual
 
     if condition is not None:
-        maps = counterfactual.maps_for(summary, condition, seed)
+        if maps is None:        # given maps: the per-instance label rule (counterfactual.instance_maps)
+            maps = counterfactual.maps_for(summary, condition, seed)
         withhold = counterfactual.withhold_text(condition)
     else:
         maps = anonymize_maps(summary) if anonymize_enabled() else None
@@ -363,14 +402,71 @@ def validate_ranked(answer: dict, summary: dict) -> tuple[list[dict], list | Non
     return groups, rel, problems
 
 
+# Family names in an answer (name rule). A name shown in the prompt (after the presentation's renaming) is kept as it
+# is. Any other string is compared with the shown names of its kind (constraint families for masters, joint supports,
+# ranked groups, relevant families and the keys of "families"; variable families for linking variables) after both are
+# reduced to a key: a trailing ":<letters>" suffix (a type letter or block label, as in "Open_#:B") and a trailing index
+# pattern ("_#", "_#_#", "[#]", "[#,#]", ...) removed, case ignored. The string is read as that shown name when exactly
+# one shown name has its key; otherwise it is left as it is and is dropped by the validators as an unknown family.
+_NAME_SUFFIX = re.compile(r":[A-Za-z]+$")
+_NAME_INDEX = re.compile(r"(?:_?#|_?\[[#,\s]*\])+$")
+
+
+def _name_key(s: str) -> str:
+    return _NAME_INDEX.sub("", _NAME_SUFFIX.sub("", s.strip())).rstrip("_").lower()
+
+
+def normalize_name(s, names) -> str:
+    """s read under the name rule against the shown names `names` (see above)."""
+    if not isinstance(s, str) or s in names:
+        return s
+    key = _name_key(s)
+    hits = [n for n in names if _name_key(n) == key]
+    return hits[0] if len(hits) == 1 else s
+
+
+def normalize_answer(answer: dict, cons_names, var_names) -> dict:
+    """A copy of an answer object with every family name read under the name rule (cons_names, var_names: the
+    constraint and variable family names shown in the prompt)."""
+    a = json.loads(json.dumps(answer))
+    nc = lambda xs: [normalize_name(x, cons_names) for x in xs] if isinstance(xs, list) else xs  # noqa: E731
+    for c in a.get("candidates") or []:
+        if isinstance(c, dict):
+            if "master_constraint_families" in c:
+                c["master_constraint_families"] = nc(c["master_constraint_families"])
+            if isinstance(c.get("linking_variable_families"), list):
+                c["linking_variable_families"] = [normalize_name(x, var_names) for x in c["linking_variable_families"]]
+    for key in ("joint_supports", "ranked_groups"):
+        for g in a.get(key) or []:
+            if isinstance(g, dict) and isinstance(g.get("families"), list):
+                g["families"] = nc(g["families"])
+    if isinstance(a.get("relevant_families"), list):
+        a["relevant_families"] = nc(a["relevant_families"])
+    if isinstance(a.get("families"), dict):
+        fam = {}
+        for k2, v in a["families"].items():
+            k3 = normalize_name(k2, cons_names)
+            fam[k3 if k3 not in fam else k2] = v
+        a["families"] = fam
+    return a
+
+
 def interpret(content: str, summary: dict, k: int, maps: dict | None, prompt_version: str = "v2") -> dict:
     """The parsed fields of one answer text: {"answer", "candidates", "problems", "supports", "family_info"}, and
     for the ranked prompt "ranked_groups" and "relevant_families". `maps` are the presentation maps of the prompt
-    (None: true names)."""
+    (None: true names). Family names are read under the name rule (normalize_answer) before the presentation's names
+    are mapped back to the true ones."""
     try:
         answer = extract_json(content, REQUIRED_KEYS.get(prompt_version, ()))
     except (ValueError, json.JSONDecodeError) as e:
-        return {"answer": None, "candidates": [], "problems": [f"unparseable answer: {e}"]}
+        out = {"answer": None, "candidates": [], "problems": [f"unparseable answer: {e}"], "supports": [],
+               "family_info": {}}
+        if prompt_version == "ranked":
+            out.update({"ranked_groups": [], "relevant_families": None})
+        return out
+    shown = _anon_summary(summary, maps) if maps is not None else summary
+    answer = normalize_answer(answer, [f["family"] for f in shown["constraint_families"]],
+                              [f["family"] for f in shown["variable_families"]])
     if maps is not None:
         answer = _deanon_answer(answer, maps)
     cands, problems = validate(answer, summary, k)
