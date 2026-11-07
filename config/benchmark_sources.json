@@ -1,0 +1,429 @@
+{
+ "gcg_commit": "c0e230a34ab836f9c344c60269fbd65fe4713f5b",
+ "files": [
+  {
+   "source": "canad_r",
+   "file": "R.tgz",
+   "url": "https://commalab.di.unipi.it/files/Data/MMCF/R.tgz",
+   "bytes": 155761,
+   "sha256": "40a3262a93229621937af2b51b74c0891ece7c38bf47261491b54dc77277041a",
+   "kind": "data"
+  },
+  {
+   "source": "canad_r",
+   "file": "mmcf_page.html",
+   "url": "https://commalab.di.unipi.it/datasets/mmcf/",
+   "bytes": 85949,
+   "sha256": "10512f0d59fb284534dcc2634a68e8d8bf0e911d969757dfa2d5991f62940f03",
+   "kind": "page"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr12_30.dat",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr12_30.dat",
+   "bytes": 2807,
+   "sha256": "13afc69fc2180c54bdb22e5446af634822b6d9186da3b24791b2debec3047ce9",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr12_30.mod",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr12_30.mod",
+   "bytes": 1726,
+   "sha256": "cd49c602228b65611508c5dfa5e1fd0cd5131f4c9abd35e2c87ae0d49de54d28",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr24_30.dat",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr24_30.dat",
+   "bytes": 4334,
+   "sha256": "8ef8c3b0b81fcfbaa670a6f6772655d7058891bb3c3f1d2d779286806af76357",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr24_30.mod",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr24_30.mod",
+   "bytes": 1726,
+   "sha256": "cd49c602228b65611508c5dfa5e1fd0cd5131f4c9abd35e2c87ae0d49de54d28",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr6_15.dat",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr6_15.dat",
+   "bytes": 898,
+   "sha256": "9f2b74bed535ff44effb974cb9001b4cf54695c04ea30fa840a0444c6bbbf94c",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr6_15.mod",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr6_15.mod",
+   "bytes": 1726,
+   "sha256": "cd49c602228b65611508c5dfa5e1fd0cd5131f4c9abd35e2c87ae0d49de54d28",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr6_30.dat",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr6_30.dat",
+   "bytes": 1435,
+   "sha256": "e5d66c7f9f9cbc6cfc58eb95ce4dea1379c83e21f1dedc06ad61e3a211322ef6",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "tr6_30.mod",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/tr6_30.mod",
+   "bytes": 1726,
+   "sha256": "cd49c602228b65611508c5dfa5e1fd0cd5131f4c9abd35e2c87ae0d49de54d28",
+   "kind": "data"
+  },
+  {
+   "source": "lotsizelib_ampl",
+   "file": "trigeiro.mod",
+   "url": "https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/trigeiro.mod",
+   "bytes": 1726,
+   "sha256": "cd49c602228b65611508c5dfa5e1fd0cd5131f4c9abd35e2c87ae0d49de54d28",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap101.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap101.txt",
+   "bytes": 15781,
+   "sha256": "7f1d0e32808b8c1bd9e3f49ee42dd758abb5a157da63ed52182f22bd14919ebe",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap102.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap102.txt",
+   "bytes": 15805,
+   "sha256": "52725adf3d065fa7e6f365817c9ba5d9cec1261f93403b30fd15e00dd2cb8b40",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap103.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap103.txt",
+   "bytes": 15805,
+   "sha256": "c22544480223e067fad39960171796d681e44b5e20041c4280779b9d57b65198",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap104.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap104.txt",
+   "bytes": 15805,
+   "sha256": "cc4c0ab975191650dc12d85d7c93b6cc649ec5a448a29218fa39953451e16833",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap111.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap111.txt",
+   "bytes": 31264,
+   "sha256": "16b09017bb73164a5490fe9cd71a36da9269c702e8559b542e23a84d4e25774a",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap112.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap112.txt",
+   "bytes": 31313,
+   "sha256": "1c21ffe08e88c58266be120df42a62a7be00e68f00bce88fbe304a879d7681df",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap113.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap113.txt",
+   "bytes": 31313,
+   "sha256": "8f38e1288562cd1334f2f4ea4d50720b5212a64aee2503c1a5a8046d27a31fc0",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap114.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap114.txt",
+   "bytes": 31313,
+   "sha256": "da4e7d25b11594e1621406e3a1ec8d2dce402d14f576ccaa88b42409afee221b",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap121.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap121.txt",
+   "bytes": 31314,
+   "sha256": "9fae6b8dc3ec29b75632615fda44ae97454f5bc2fb764b1a32cad86c80e78ff9",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap122.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap122.txt",
+   "bytes": 31363,
+   "sha256": "f9ea702cec5d5d15135f897357ce660bb7e6d59c46ca83d6de7fc66c25f889a3",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap123.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap123.txt",
+   "bytes": 31363,
+   "sha256": "15fd1730362c020811f7b27001af4280750f1e358238d619755cfc8c9171a76c",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap124.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap124.txt",
+   "bytes": 31363,
+   "sha256": "5b7bd219ba1ba9ead7f50e6fe2d88958eccd56c648de8b8da6fd968f4efa22d3",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap131.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap131.txt",
+   "bytes": 31314,
+   "sha256": "3ea70c64d029f21a2065b588c4ffa7b0d60cab6ee82fd7775360e0f7e007b36a",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap132.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap132.txt",
+   "bytes": 31363,
+   "sha256": "f9826bdee15ab1b0594170a9fafbcee7911e8dcf61e441886883fab77a4c1886",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap133.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap133.txt",
+   "bytes": 31363,
+   "sha256": "c200ca2e51cd58b3b3fc5a43c584aa3c4c5b6ddee91fd90983c998ebdb90f402",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap134.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap134.txt",
+   "bytes": 31363,
+   "sha256": "664737506cac1ac7c641e7daf618602e890a53d04cfde31389c98fff38112d7b",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap41.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap41.txt",
+   "bytes": 10212,
+   "sha256": "31fa9f6ad3c684c66392f0ad5dfa3dcd0262a404ea02a79238f9a1200071358e",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap42.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap42.txt",
+   "bytes": 10227,
+   "sha256": "fa065519070061e3eb897b5b91e22e053cc6a15e76297906294a56d90cfba27e",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap43.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap43.txt",
+   "bytes": 10227,
+   "sha256": "a19afbd39576615f9ecc69f1a4667c80ddb77878c09a656db9500e39763a8e46",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap44.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap44.txt",
+   "bytes": 10227,
+   "sha256": "d0ee030dbdc08e3d5f57cfc3337c546d85635b4ea9e14507bab91590696c3279",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap51.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap51.txt",
+   "bytes": 10243,
+   "sha256": "519deaa93fa8000e73a5d0f06149ef157b5b6a96d2711690178693f2547735ea",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap61.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap61.txt",
+   "bytes": 10228,
+   "sha256": "25242994e36e377b16fb9f943bb201641ee03682e84842764db6ab66d931214c",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap62.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap62.txt",
+   "bytes": 10243,
+   "sha256": "73d2f244040e44068da5a8b4d2fbbe2fbdd7d672a73dd182439f2fcfbc8ff39f",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap63.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap63.txt",
+   "bytes": 10243,
+   "sha256": "6692ce849999847180ab50813cf6b7d2241fc4ab39d480da86b26845032ff1dc",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap64.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap64.txt",
+   "bytes": 10243,
+   "sha256": "b2fa37305a456768560c5706cca36d84eaff86d16dc7bc9d1afb96d55fb4110d",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap71.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap71.txt",
+   "bytes": 10228,
+   "sha256": "dda7a533a674bd5c82766f58aa3ccb995f9cf7f776210f9aa1a7a49406ded8dc",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap72.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap72.txt",
+   "bytes": 10243,
+   "sha256": "fbbc19aef762f3db1d1ba79500fee3268b36e4d482d6062a81153787b58174e1",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap73.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap73.txt",
+   "bytes": 10243,
+   "sha256": "36ed79748e049e01fe7e2f254aeb62ef64ebef5090caf770083242089352c703",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap74.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap74.txt",
+   "bytes": 10243,
+   "sha256": "a740928ead01307256663517055486660d8303b6c61b1a0b2b1e9f2b2fc3af06",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap81.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap81.txt",
+   "bytes": 15756,
+   "sha256": "ebee3fd87144278f5559e80a87f1ab057147059f6b7f6b13e3691a2e73d03c70",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap82.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap82.txt",
+   "bytes": 15780,
+   "sha256": "b135daae3b9ae598a93fac8b17f77050b903df05b0e3e5d7e516cc8a04bf4bf8",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap83.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap83.txt",
+   "bytes": 15780,
+   "sha256": "4a83e58e6c934103e0b6883a06f223a3181bc774e591760317f4c71cae3e0f93",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap84.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap84.txt",
+   "bytes": 15780,
+   "sha256": "09ffb7e2a6ef05c7be858a35762711c262175ba45acf22bbaa7d0cf38b42aeaf",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap91.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap91.txt",
+   "bytes": 15781,
+   "sha256": "720045eef844a6515670deebd5e6ab0462294a204ea90c51bc536572989f51f6",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap92.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap92.txt",
+   "bytes": 15805,
+   "sha256": "7f9b62ff74b550e1ab15f3801119c3bb824203a419efa02b399132c83ea3011d",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap93.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap93.txt",
+   "bytes": 15805,
+   "sha256": "eb01cddb3746533bff4a85343a72247c84ead4f21575dc6e7569829f58efd771",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "cap94.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap94.txt",
+   "bytes": 15805,
+   "sha256": "ed4e216a14997e452f701f841b741efc573d3911ab492146cf7fb62f0e3443d4",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_cap",
+   "file": "capinfo.html",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/capinfo.html",
+   "bytes": 2773,
+   "sha256": "1212ed0c0a698ce7bd2c52ea0a283172468a59ca12e01e46c82ddc87fbe99b08",
+   "kind": "page"
+  },
+  {
+   "source": "trigeiro_gcg",
+   "file": "ls-trigeiro.solu",
+   "url": "https://raw.githubusercontent.com/scipopt/gcg/c0e230a34ab836f9c344c60269fbd65fe4713f5b/check/testset/ls-trigeiro.solu",
+   "bytes": 3192,
+   "sha256": "df8367ae8766441c388d3a3e71470aa62d5d259280a562da215c1d7532904737",
+   "kind": "data"
+  },
+  {
+   "source": "trigeiro_gcg",
+   "file": "ls-trigeiro.test",
+   "url": "https://raw.githubusercontent.com/scipopt/gcg/c0e230a34ab836f9c344c60269fbd65fe4713f5b/check/testset/ls-trigeiro.test",
+   "bytes": 3709,
+   "sha256": "0a1b5173c5b098946479f8166c174fc134e48be360f43e613eccbd669769e88e",
+   "kind": "data"
+  },
+  {
+   "source": "trigeiro_suerie",
+   "file": "conv_ttm_new.txt",
+   "url": "https://suerie.de/testsets/clspl/conv_ttm_new.txt",
+   "bytes": 26718,
+   "sha256": "9dbd6e35e125886067d59a986983450ade02f5c6aa0a925cc83ec94128d72f92",
+   "kind": "data"
+  },
+  {
+   "source": "trigeiro_suerie",
+   "file": "data.tar.bz2",
+   "url": "https://suerie.de/testsets/clspl/data.tar.bz2",
+   "bytes": 296960,
+   "sha256": "ea1d692c97065ff84dd54ba4769c83f058e4afc0bc2f9a92203da04fcf3d492b",
+   "kind": "data"
+  }
+ ]
+}
