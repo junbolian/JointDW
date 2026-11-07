@@ -260,9 +260,10 @@ def facility_location(demand=(2, 2, 3), capacity=(4, 4), open_cost=(5, 6), assig
 
 def rich_lot_sizing(demand=((2, 2, 2), (0, 3, 3)), capacity=(7, 7, 7), setup_time=(1, 1), min_lot=(2, 2),
                     storage=(6, 6, 6), safety=(1, 0), overtime=(2, 2, 2), setup_budget=3, holding=(1, 1),
-                    setup=(6, 7), overtime_cost=3, name="rich_ls") -> MILP:
+                    setup=(6, 7), overtime_cost=3, max_setups=None, name="rich_ls") -> MILP:
     """Two-item multi-period lot sizing with setup times, minimum lots, storage, safety stock, one setup per period,
-    overtime and a setup budget (9 constraint families on shared variables; I * T binary setups)."""
+    overtime and a setup budget (9 constraint families on shared variables; I * T binary setups). max_setups gives the
+    limit of MaxSetupsPerPeriod per period (default 1 in every period, the rich models of the paper)."""
     I, T = len(demand), len(demand[0])
     letters = string.ascii_uppercase
     m = MILP(name)
@@ -298,7 +299,8 @@ def rich_lot_sizing(demand=((2, 2, 2), (0, 3, 3)), capacity=(7, 7, 7), setup_tim
         for t in range(T - 1):
             m.add_row(f"SafetyStock_{i + 1}_{t + 1}", "SafetyStock_#_#", {s[i, t]: 1}, lo=safety[i])
     for t in range(T):
-        m.add_row(f"MaxSetupsPerPeriod_{t + 1}", "MaxSetupsPerPeriod_#", {y[i, t]: 1 for i in range(I)}, up=1)
+        m.add_row(f"MaxSetupsPerPeriod_{t + 1}", "MaxSetupsPerPeriod_#", {y[i, t]: 1 for i in range(I)},
+                  up=1 if max_setups is None else max_setups[t])
     for t in range(T):
         m.add_row(f"OvertimeLimit_{t + 1}", "OvertimeLimit_#", {o[t]: 1}, up=overtime[t])
     m.add_row("SetupBudget", "SetupBudget", {y[i, t]: 1 for i in range(I) for t in range(T)}, up=setup_budget)
@@ -314,6 +316,9 @@ def rich_lot_sizing(demand=((2, 2, 2), (0, 3, 3)), capacity=(7, 7, 7), setup_tim
                      "capacity, and at least a minimum lot; at most one product can be set up per period, and the "
                      "total number of setups is limited. Stock is limited by the storage space, and a safety stock "
                      "must be kept at the end of every period but the last. Minimize setup, holding and overtime cost.")
+    if max_setups is not None:
+        m.description = m.description.replace("at most one product can be set up per period",
+                                              "the number of products set up in a period is limited")
     m.family_text = {"Balance_#_#": "inventory balance of each product in each period",
                      "SetupLink_#_#": "a product can be produced in a period only if its setup is paid",
                      "Capacity_#": "production plus setup times in a period are at most the capacity plus overtime",
@@ -323,6 +328,8 @@ def rich_lot_sizing(demand=((2, 2, 2), (0, 3, 3)), capacity=(7, 7, 7), setup_tim
                      "MaxSetupsPerPeriod_#": "at most one product is set up in a period",
                      "OvertimeLimit_#": "the overtime in a period is at most its limit",
                      "SetupBudget": "the total number of setups is at most the budget"}
+    if max_setups is not None:
+        m.family_text["MaxSetupsPerPeriod_#"] = "at most a given number of products is set up in a period"
     return m
 
 

@@ -15,7 +15,20 @@ scip         SCIP on the compact model.
 gurobi       Gurobi on the compact model (needs a full Gurobi license).
 lp           LP relaxation of the compact model (SCIP, every variable made continuous).
 
-Bound-evaluation setting (``--root --no-cuts --no-heur --no-round``): node limit 1, SCIP
+Propagation (``--propagation``, ``run(propagation=...)``)
+---------------------------------------------------------
+off       (default of the bound-evaluation modes dw-given and dw-auto) propagating/maxrounds = 0 and propagating/maxroundsroot = 0 on the original problem and on GCG's
+          master problem. Every bound evaluation whose value feeds a gain (census, ground truth, lookahead-scored
+          searches, GCG's detected decompositions in the census setting) uses it: the gain of a family set is the
+          improvement of the Dantzig-Wolfe bound from convexifying it, and root propagation in the original problem
+          (whose binaries are integral) tightens variable bounds beyond that bound.
+default   SCIP's defaults (propagating/maxrounds 100, propagating/maxroundsroot 1000); default of the other modes, and
+          passed explicitly by the solve-time experiments (full branch-and-price, llmdw.benchmark.bnp), which measure solver performance, not the bound.
+The lp mode is a pure LP (every variable continuous), on which propagation cannot change the value; it keeps SCIP's
+defaults and only records them. Every result records the effective values of both parameters for the original problem
+(and for GCG's master problem in the GCG modes) under ``propagation``.
+
+Bound-evaluation setting (``--root --no-cuts --no-heur --no-round``, propagation off): node limit 1, SCIP
 separators and GCG master separators off, primal heuristics off (a primal bound would
 trigger reduced-cost fixing and move the root bound away from the DW bound),
 ``pricing/masterpricer/abortpricingint`` off, and no rounding
@@ -38,13 +51,26 @@ import argparse
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
+from llmdw.gcg import memory_budget
+
 MODES = ("dw-given", "dw-auto", "gcg-default", "scip", "gurobi", "lp")
+BOUND_MODES = ("dw-given", "dw-auto")
+PROPAGATION_SETTINGS = ("off", "default")
+PROPAGATION_PARAMS = ("propagating/maxrounds", "propagating/maxroundsroot")
+
+
+def _propagation_off(m):
+    for p in PROPAGATION_PARAMS:
+        m.setIntParam(p, 0)
+
+
+def _propagation_values(m) -> dict:
+    return {p: m.getParam(p) for p in PROPAGATION_PARAMS}
 
 
 # ----------------------------------------------------------------------------- child side
@@ -106,6 +132,9 @@ def _child_gcg(args) -> dict:
     if add_breaker:
         m.addVar(name="llmdw_objint_breaker", vtype="C", lb=0.0, ub=0.0, obj=1.0)
     _common_scip_params(m, args)
+    if args.propagation == "off":
+        _propagation_off(m)
+        _propagation_off(m.getMasterProb())
     m.setIntParam("pricing/masterpricer/nthreads", 1)
     if args.no_cuts:
         _no_cuts_gcg(m)
@@ -174,6 +203,8 @@ def _child_gcg(args) -> dict:
     m.optimize()
     m.printStatistics()
     out.update(_collect(m))
+    out["propagation"] = {"setting": args.propagation, "original": _propagation_values(m),
+                          "master": _propagation_values(m.getMasterProb())}
     return out
 
 
@@ -195,8 +226,14 @@ def _child_scip(args) -> dict:
             m.setSeparating(SCIP_PARAMSETTING.OFF)
         if args.no_heur:
             m.setHeuristics(SCIP_PARAMSETTING.OFF)
+        if args.propagation == "off":
+            _propagation_off(m)
     m.optimize()
-    return _collect(m)
+    out = _collect(m)
+    # lp: unchanged SCIP defaults (a pure LP, propagation cannot change its value); the values are recorded only
+    out["propagation"] = {"setting": "default" if args.mode == "lp" else args.propagation,
+                          "original": _propagation_values(m)}
+    return out
 
 
 def _child_lp_highs(args) -> dict:
@@ -225,7 +262,8 @@ def _child_lp_highs(args) -> dict:
         raise RuntimeError(f"HiGHS LP status {status} after {secs:.1f} s (not Optimal, not used)")
     obj = h.getInfo().objective_function_value
     return {"status": "optimal", "dual_bound": obj, "primal_bound": obj, "solving_time": secs,
-            "lp_solver": "highs-ipm", "highs_model_status": status}
+            "lp_solver": "highs-ipm", "highs_model_status": status,
+            "propagation": {"setting": "default", "original": "HiGHS LP (no SCIP propagation)"}}
 
 
 def _child_gurobi(args) -> dict:
@@ -336,10 +374,24 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
         no_cuts: bool = False, no_round: bool = False, no_heur: bool = False, score: str | None = None,
         names: bool = False,
         time_limit: float | None = None, seed: int = 0, write_chosen: str | None = None,
-        log_path: str | None = None, margin: float = 120.0) -> dict:
-    """Run one solve in a child process (isolates crashes) and return the parsed result."""
+        log_path: str | None = None, margin: float = 120.0, propagation: str | None = None,
+        memory_gb: float | None = None) -> dict:
+    """Run one solve in a child process (isolates crashes) and return the parsed result.
+
+    propagation: "off" (bound evaluations; the default of dw-given and dw-auto) or "default" (SCIP defaults; the default
+    of the other modes, and of the lp mode always); see the module docstring.
+    memory_gb: address-space cap of this child (llmdw.gcg.address_limit) and SCIP's memory limit (0.8 of it); default
+    LLMDW_CHILD_MEMORY_GB. The child waits for its share of the memory budget (llmdw.gcg.memory_budget) before its
+    clock starts. The result records start and end time and the available memory at both, and is written atomically
+    (temporary file, then rename)."""
     if mode not in MODES:
         raise ValueError(mode)
+    if propagation is None:
+        propagation = "off" if mode in BOUND_MODES else "default"
+    if mode == "lp":
+        propagation = "default"
+    if propagation not in PROPAGATION_SETTINGS:
+        raise ValueError(propagation)
     cmd = [sys.executable, "-m", "llmdw.gcg.gcg_run", mode, "--child", "--mps", mps, "--out", out_json, "--seed", str(seed)]
     if dec:
         cmd += ["--dec", dec]
@@ -351,6 +403,7 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
         cmd.append("--no-round")
     if no_heur:
         cmd.append("--no-heur")
+    cmd += ["--propagation", propagation]
     if score:
         cmd += ["--score", score]
     if names:
@@ -359,23 +412,32 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
         cmd += ["--time", str(time_limit)]
     if write_chosen:
         cmd += ["--write-chosen", write_chosen]
-    cap_gb = os.environ.get("LLMDW_CHILD_MEMORY_GB")
-    if cap_gb and os.name == "posix" and shutil.which("prlimit"):
+    cap_gb = str(memory_gb) if memory_gb else os.environ.get("LLMDW_CHILD_MEMORY_GB")
+    if cap_gb:
         # hard address-space cap per solve, so one large decomposition cannot exhaust the machine
-        cmd = ["prlimit", f"--as={int(float(cap_gb) * 2 ** 30)}", "--"] + cmd
+        from llmdw.gcg import address_limit
+        cmd = address_limit.prefix(cap_gb) + cmd
     log_path = log_path or (out_json[:-5] if out_json.endswith(".json") else out_json) + ".log"
     # dw-auto and gcg-default may spend up to time_limit in detection before the solve starts
     factor = 2.0 if mode in ("dw-auto", "gcg-default") else 1.0
     wall_limit = None if time_limit is None else factor * float(time_limit) + margin
     env = {**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[2]) + os.pathsep + os.environ.get("PYTHONPATH", "")}
-    t0 = time.time()
-    Path(out_json).unlink(missing_ok=True)  # a result file of another run is never read
-    try:
-        with open(log_path, "w", encoding="utf-8") as log:
-            proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=wall_limit, env=env)
-        code = proc.returncode
-    except subprocess.TimeoutExpired:
-        code = "killed"
+    if cap_gb:
+        env["LLMDW_CHILD_MEMORY_GB"] = cap_gb
+    # shared memory budget (llmdw.gcg.memory_budget): the wait comes before the clock of wall_limit starts
+    with memory_budget.reserve(float(cap_gb) if cap_gb else None, key=mps) as budget_wait:
+        _wait_for_memory()
+        t0 = time.time()
+        clock = {"started_at": _now(), "mem_available_gb_start": memory_budget.mem_available_gb()}
+        Path(out_json).unlink(missing_ok=True)  # a result file of another run is never read
+        try:
+            with open(log_path, "w", encoding="utf-8") as log:
+                proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=wall_limit, env=env)
+            code = proc.returncode
+        except subprocess.TimeoutExpired:
+            code = "killed"
+        clock.update({"ended_at": _now(), "mem_available_gb_end": memory_budget.mem_available_gb(),
+                      "budget_wait_seconds": round(budget_wait, 3)})
     res = {}
     if os.path.exists(out_json):
         with open(out_json, encoding="utf-8") as fh:
@@ -388,11 +450,41 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
             res.update(parse_gcg_log(fh.read()))
     except OSError:
         pass
+    res.setdefault("propagation", {"setting": propagation})   # effective values only when the child finished
+    res.update({"memory_gb": float(cap_gb) if cap_gb else None, "log_path": log_path, **clock})
     res.update({"mode": mode, "mps": mps, "dec": dec, "root": root, "no_cuts": no_cuts, "no_round": no_round, "no_heur": no_heur, "score": score,
                 "names": names, "time_limit": time_limit, "seed": seed})
-    with open(out_json, "w", encoding="utf-8") as fh:
-        json.dump(res, fh, indent=1)
+    write_json_atomic(out_json, res)
     return res
+
+
+def _now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%S%z")
+
+
+def write_json_atomic(path, obj) -> None:
+    """Write JSON to path through a temporary file in the same directory and a rename, so a kill never leaves a
+    partial file under the final name."""
+    tmp = f"{path}.tmp{os.getpid()}"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(obj, fh, indent=1)
+    os.replace(tmp, path)
+
+
+def _wait_for_memory() -> None:
+    """With LLMDW_MIN_AVAILABLE_GB set, wait until the machine has that much available memory before a child starts
+    (several batch drivers share one machine)."""
+    need = os.environ.get("LLMDW_MIN_AVAILABLE_GB")
+    if not need or not os.path.exists("/proc/meminfo"):
+        return
+    import random
+
+    while True:
+        with open("/proc/meminfo", encoding="ascii") as fh:
+            avail = next((int(x.split()[1]) for x in fh if x.startswith("MemAvailable:")), None)
+        if avail is None or avail / 2 ** 20 >= float(need):
+            return
+        time.sleep(5 + 5 * random.random())
 
 
 def main(argv=None) -> int:
@@ -405,6 +497,10 @@ def main(argv=None) -> int:
     ap.add_argument("--no-cuts", action="store_true")
     ap.add_argument("--no-round", action="store_true")
     ap.add_argument("--no-heur", action="store_true")
+    ap.add_argument("--propagation", choices=PROPAGATION_SETTINGS, default=None,
+                    help="off: propagating/maxrounds = 0 and propagating/maxroundsroot = 0 on the original problem and "
+                         "GCG's master problem (default of dw-given and dw-auto); default: SCIP defaults (default of the "
+                         "other modes)")
     ap.add_argument("--score")
     ap.add_argument("--names", action="store_true")
     ap.add_argument("--time", type=float)
@@ -416,7 +512,7 @@ def main(argv=None) -> int:
         return _child_main(args)
     res = run(args.mode, args.mps, args.out, dec=args.dec, root=args.root, no_cuts=args.no_cuts, no_round=args.no_round, no_heur=args.no_heur,
               score=args.score, names=args.names, time_limit=args.time, seed=args.seed,
-              write_chosen=args.write_chosen)
+              write_chosen=args.write_chosen, propagation=args.propagation)
     print(json.dumps({k: res.get(k) for k in ("ok", "status", "dual_bound", "primal_bound", "solving_time",
                                               "blocks", "pricing_seconds", "error")}))
     return 0

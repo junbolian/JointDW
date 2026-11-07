@@ -74,9 +74,10 @@ def miplib_truth(oracle_path: Path, lookahead_path: Path | None) -> dict | None:
     if not scorable_table(tab):
         return None
     tol = 1e-4 if info["scale"] else 1e-6 * max(1.0, abs(o.get("lp_bound") or 0.0))
-    groups = structure.zero_marginal_groups(tab, tol=tol)
+    failed = info["failed"].get((), set())
+    groups = structure.zero_marginal_groups(tab, tol=tol, failed=failed)
     joint = [g["group"] for g in groups if g["size"] >= 2 and g["status"] == "certain"]
-    alone = {next(iter(g["group"])) for g in groups if g["size"] == 1}
+    alone = {next(iter(g["group"])) for g in groups if g["size"] == 1 and g["status"] != "incomplete"}
     table = {T: v["gain"] for T, v in tab.items()}
     lookahead = None
     if la:
@@ -87,8 +88,11 @@ def miplib_truth(oracle_path: Path, lookahead_path: Path | None) -> dict | None:
     for name, bl in (o.get("baselines") or {}).items():
         if bl.get("representable") and bl.get("aligned_master_families") is not None:
             gcg[name] = frozenset(info["families"]) - frozenset(bl["aligned_master_families"])
+    # decisions that depend on a failed evaluation (llmdw.scoring.structure): reported, not scored differently
+    incomplete = {"groups": [sorted(g["group"]) for g in groups if g["status"] == "incomplete"],
+                  "best_set": bool(failed), "failed_sets": sorted("|".join(sorted(T)) for T in failed)}
     return {"families": info["families"], "joint": joint, "alone": alone, "table": table, "lookahead": lookahead,
-            "gcg": gcg}
+            "gcg": gcg, "incomplete": incomplete}
 
 
 def score(rec: dict, truth: dict) -> dict:

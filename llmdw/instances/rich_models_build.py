@@ -13,7 +13,7 @@ Each instance directory holds the MPS file, the description and formulation text
 of every set of at most 3 families from hull.dw_bound with a rational certificate, the zero-marginal groups and their
 source from hull.group_source), lookahead.json (the one-pass lookahead at the HiGHS dual for the same sets) and
 gcg_anchors.json (the decompositions GCG detects in the oracle setting: dw-auto, root node, no cuts, no heuristics,
-120 s). draws.json records every candidate with the reason of a rejection.
+SCIP propagation off, 120 s; llmdw.gcg.oracle.run_baseline). draws.json records every candidate with the reason of a rejection.
 
 Usage
 -----
@@ -32,14 +32,15 @@ from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction
 from pathlib import Path
 
+from llmdw.gcg import gcg_run
+from llmdw.gcg.oracle import GCG_BASELINES
+
 PER_CLASS = 8
 MAX_SET = 3
 MIN_GAP = 0.02
 MAX_SINGLE_SHARE = 0.5
 CLASSES = ("lot_sizing", "network_design", "facility_location")
 NAME_PREFIX = "e6c"
-GCG_BASELINES = {"gcg_spfwh": dict(score="spfwh", names=False), "gcg_strong": dict(score="strong", names=False),
-                 "gcg_spfwh_names": dict(score="spfwh", names=True)}
 TOPOLOGIES = {4: ((0, 1), (1, 0), (0, 2), (1, 2), (2, 1), (1, 3), (2, 3)),
               5: ((0, 1), (1, 0), (0, 2), (1, 2), (2, 1), (1, 3), (2, 4), (3, 4))}
 
@@ -158,33 +159,28 @@ def write_instance(res: dict, root: Path) -> Path:
     return d
 
 
-def gcg_anchors(name: str, root: Path, time_limit: float = 120.0) -> dict:
-    """GCG's detected decompositions in the oracle setting, as in oracle.run_oracle: {baseline: convexified families
-    or None (not representable or degenerate)} with the status of the run."""
-    from llmdw.gcg import gcg_run
-    from llmdw.gcg.dec_io import aligned_master_families, family_profile, is_component_partition, read_dec_full
-    from llmdw.instances.families import family_of, read_model
+def gcg_anchors(name: str, root: Path, time_limit: float = 120.0, out_dir: Path | None = None) -> dict:
+    """GCG's detected decompositions in the oracle setting (llmdw.gcg.oracle.run_baseline, as in oracle.run_oracle):
+    {baseline: convexified families or None (not representable or degenerate)} with the status of the run. Written to
+    out_dir (default: the instance directory)."""
+    from llmdw.gcg.oracle import run_baseline
+    from llmdw.instances.families import family_of, objective_integral, read_model
 
     d = root / "instances" / name
+    out_dir = Path(out_dir or d)
+    out_dir.mkdir(parents=True, exist_ok=True)
     mps = str(d / "model.mps")
     model = read_model(mps)
+    integral = objective_integral(model)
     fams = sorted({family_of(r.name) for r in model.rows})
     out = {}
     for b, opts in GCG_BASELINES.items():
-        dec = str(d / f"{b}.dec")
-        res = gcg_run.run("dw-auto", mps, str(d / f"{b}.json"), root=True, no_cuts=True, no_round=True, no_heur=True,
-                          time_limit=time_limit, seed=0, write_chosen=dec, **opts)
-        row = {"status": res.get("status"), "dual_bound": res.get("dual_bound"), "convexified": None}
-        if os.path.exists(dec):
-            dd = read_dec_full(dec)
-            prof = family_profile(dd["master"], [r.name for r in model.rows])
-            aligned = aligned_master_families(prof)
-            degenerate = (not dd["master"]) and len(dd["blocks"]) == 1
-            if not degenerate and aligned is not None and is_component_partition(model, dd["blocks"], dd["master"]):
-                row["convexified"] = sorted(set(fams) - set(aligned))
-            row["degenerate"] = degenerate
-        out[b] = row
-    (d / "gcg_anchors.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
+        r = run_baseline(model, mps, out_dir, b, opts, time_limit, 0, integral)
+        out[b] = {"status": r.get("status"), "dual_bound": r.get("dual_bound"),
+                  "convexified": sorted(set(fams) - set(r["aligned_master_families"]))
+                  if r.get("aligned_master_families") is not None else None,
+                  "degenerate": r.get("degenerate"), "propagation": r.get("propagation")}
+    gcg_run.write_json_atomic(out_dir / "gcg_anchors.json", out)
     return out
 
 

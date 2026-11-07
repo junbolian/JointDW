@@ -409,7 +409,9 @@ def test_results_census_figure_corrections(tmp_path):
     (tmp_path / "work/structure").mkdir(parents=True)
     (tmp_path / "work/structure/structure_rows.json").write_text("[]")
     rows, left = results.census_figure(tmp_path, {})
-    assert rows[0]["max_set_gain"] == 1.5 and left == [{"instance": "y", "reason": "no reference optimum"}]
+    # the bound 3.0 lies beyond the optimum 2.0 of a minimization: invalid (llmdw.scoring.bounds), so the largest set
+    # gain comes from the bound 1.0
+    assert rows[0]["max_set_gain"] == 0.5 and left == [{"instance": "y", "reason": "no reference optimum"}]
     rows, _ = results.census_figure(tmp_path, {"drop_bounds": {"x": ["C"]}, "optimum": {"x": 4.0}})
     assert rows[0]["max_set_gain"] == 0.25 and "1 invalid bound(s) dropped" in rows[0]["corrections"]
 

@@ -496,10 +496,39 @@ def census_figure(work: Path, corrections: dict) -> tuple[list, list]:
             left.append({"instance": n, "reason": "no oracle evaluation or lookahead value with a bound"})
             continue
         single = [v["gain"] for T, v in cells if len(T) == 1]
-        rows.append({"instance": n, "k": len(info["families"]), "max_single_family_gain": max(single) if single else None,
-                     "max_set_gain": max(v["gain"] for _, v in cells), "group_kind": kind.get(n, "none"),
+        a, b = (max(single) if single else None), max(v["gain"] for _, v in cells)
+        if (a is not None and a > 1) or b > 1:   # beyond the optimum by at most the tolerance (llmdw.scoring.bounds)
+            changes.append("gain share above 1 within the tolerance clipped to 1")
+        rows.append({"instance": n, "k": len(info["families"]),
+                     "max_single_family_gain": min(a, 1.0) if a is not None else None, "max_set_gain": min(b, 1.0),
+                     "group_kind": kind.get(n, "none"),
                      "corrections": "; ".join(changes) + (f" ({notes[n]})" if n in notes and changes else "")})
     return rows, left
+
+
+def census_evaluations(work: Path) -> tuple[list, list]:
+    """One row per recorded census evaluation (every set, with and without linking variables) with its outcome and
+    the rule of llmdw.scoring.bounds that invalidates its bound (empty when valid), and the outcome counts: converged,
+    stopped at the limit with a bound, no bound (an invalid bound included) and, as a fourth line, the invalid bounds
+    among the evaluations without a bound."""
+    from llmdw.scoring.large_models import outcome
+
+    rows, counts = [], Counter()
+    for p in sorted((work / "work/oracle").glob("*/oracle.json")):
+        o = json.loads(p.read_text(encoding="utf-8"))
+        structure.instance_tables(o, None)                    # marks the invalid bounds (llmdw.scoring.bounds)
+        for r in o.get("subsets") or []:
+            oc = outcome(r)
+            counts[oc] += 1
+            counts["invalid bound"] += bool(r.get("bound_invalid"))
+            rows.append({"instance": p.parent.name, "key": r.get("key"), "status": r.get("status"),
+                         "dual_bound": r.get("dual_bound"), "solving_time": r.get("solving_time"), "outcome": oc,
+                         "bound_invalid": r.get("bound_invalid") or ""})
+    n = sum(counts[k] for k in ("converged", "stopped at the limit with a bound", "no bound"))
+    out = [{"outcome": k, "evaluations": counts[k], "share": counts[k] / n if n else None}
+           for k in ("converged", "stopped at the limit with a bound", "no bound", "invalid bound")]
+    out.append({"outcome": "all family-set evaluations", "evaluations": n, "share": 1.0 if n else None})
+    return rows, out
 
 
 def census_counts(work: Path) -> list:
@@ -721,8 +750,8 @@ def ranked_and_narrow(phase, recs_by, instances, limits=SIZE_LIMITS, conditions=
     evaluations of the ranked-list order and its interleaving with the lookahead order (relabel.ranked_iter); per C:
     mean |C| / k, the share of samples whose C contains a maximal-gain set, and mean evaluations of "narrow then
     lookahead" and its interleaving (relabel.narrow_iter); next to lookahead, covering and JointDW; paired
-    differences over instances. Per instance the mean over its samples; L_vote is one list per cell (a pilot, not an
-    independent sample). Returns (ranked rows, ranked paired, narrow rows, narrow paired)."""
+    differences over instances. Per instance the mean over its samples; L_vote is one list per cell, not an
+    independent sample. Returns (ranked rows, ranked paired, narrow rows, narrow paired)."""
     rk_rows, rk_pair, nw_rows, nw_pair = [], [], [], []
     names = sorted(n for n, i in instances.items() if i["truth"]["joint"])
 
@@ -794,7 +823,7 @@ def ranked_and_narrow(phase, recs_by, instances, limits=SIZE_LIMITS, conditions=
                     for key, vals in pi.items():
                         cin[key][n] = _mean(vals)
                 base = {"phase": phase, "limit": limit, "config": cfg, "condition": cond}
-                for lname, label in (("cand", "L_cand"), ("vote", "L_vote (pilot: one list per cell)")):
+                for lname, label in (("cand", "L_cand"), ("vote", "L_vote (one list per cell)")):
                     row = {**base, "list": label, "n_instances": len(ev[f"ranked_{lname}"]),
                            "mean_list_length": _mean(length[lname])}
                     for m in (1, 3, 5):
@@ -1646,6 +1675,7 @@ def main(argv=None) -> int:
     T["census_shares"], T["census_instances"], T["census_counts"] = shares, per_inst, census_counts(work)
     corr = json.loads(Path(args.census_corrections).read_text(encoding="utf-8")) if args.census_corrections else {}
     T["census_figure"], T["census_figure_left_out"] = census_figure(work, corr)
+    T["census_evaluations"], T["census_outcomes"] = census_evaluations(work)
     T["templates_table"] = templates_table(work)
     T["settings"] = [r for r in settings.table_rows(args.settings) if r["config"] in configs]
     T["sample_of_record"] = sample_of_record(T, configs, times)
@@ -1816,6 +1846,12 @@ def render(T: dict, configs: list) -> str:
     s += ["## 4. Census", "", "`census_shares.csv`, `census_instances.csv`, `census_counts.csv`.", "",
           md_table(T["census_shares"], ["group_kind", "denominator", "k", "n", "share", "wilson_lo", "wilson_hi"]), "",
           md_table(T["census_counts"], ["count", "n"]), "",
+          "Outcomes of the family-set evaluations (`census_outcomes.csv`; per evaluation with the rule of "
+          "llmdw.scoring.bounds that invalidates its bound in `census_evaluations.csv`). An invalid bound counts as no "
+          "bound; the line \"invalid bound\" counts these among the evaluations without a bound.", "",
+          md_table(T["census_outcomes"], ["outcome", "evaluations", "share"]), "",
+          md_table([r for r in T["census_evaluations"] if r["bound_invalid"]],
+                   ["instance", "key", "status", "dual_bound", "solving_time", "bound_invalid"]), "",
           "### 4b. Census figure data (corrected)", "",
           "Largest single-family gain and largest set gain as shares of the LP gap, per instance, after the "
           "corrections listed in the corrections column (`census_figure.csv`); the census counts above do not change "

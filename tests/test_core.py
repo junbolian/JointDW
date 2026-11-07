@@ -218,7 +218,7 @@ def test_lookahead_batch_runs_each_instance_in_a_capped_child(tiny_mps, tmp_path
         for key, row in ref["table"].items():
             assert res["table"][key]["lookahead"] == pytest.approx(row["lookahead"], abs=1e-6)
         assert not (out / "tiny.json.part").exists()
-    if shutil.which("prlimit"):
+    if os.name == "posix":
         out = tmp_path / "too_small"
         run(out, "0.05")
         assert not (out / "tiny.json").exists() and not (out / "tiny.json.part").exists()

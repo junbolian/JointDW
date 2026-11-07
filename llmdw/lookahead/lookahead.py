@@ -14,11 +14,12 @@ selected by the sign of y_i and x* is the LP optimum (cbar_C . x*_C is the box m
 complementary slackness). Then 0 <= l(T) <= z(T) - z_LP: l(T) is the Lagrangian bound of the
 decomposition T evaluated at the LP duals (one optimization per block), so it is a valid lower bound
 on the bound gain of T, and it is additive over connected components. When a block is not solved to
-optimality within the time limit, its dual bound is used, which keeps l(T) a valid lower bound.
+optimality within the time limit, its dual bound is used, which keeps l(T) a valid lower bound. Each block is solved by
+SCIP with its default settings except one thread and SCIP propagation off (BLOCK_PROPAGATION).
 
 Memory: when LLMDW_CHILD_MEMORY_GB is set, every block solve gets the SCIP memory limit 0.8 * cap (a block
 stopped by it keeps its dual bound, so l(T) stays valid), and llmdw.gcg.batch runs each instance in its own
-child process under prlimit with the cap.
+child process under the address-space cap (llmdw.gcg.address_limit).
 
 Time: total_time bounds the whole instance. The budget is checked before every new block solve, so an
 instance ends at most one block time after the budget runs out. The family set in progress then keeps the
@@ -41,6 +42,10 @@ from collections import defaultdict
 from llmdw.instances.families import family_of, read_model
 
 INF = 1e19
+# SCIP parameters set to 0 in every block solve: propagation off, as in every bound evaluation that feeds a gain
+# (llmdw.gcg.gcg_run). A block is a MIP solved on its own (its rows, bounds and integrality), so its optimal value does
+# not depend on propagation; only the dual bound of a block stopped at the time limit can.
+BLOCK_PROPAGATION = ("propagating/maxrounds", "propagating/maxroundsroot")
 
 
 def clean_row_duals(rows, y, tol: float) -> tuple[list, int]:
@@ -170,6 +175,8 @@ def block_value(model, lp, comp_rows, time_limit: float) -> dict:
     m.hideOutput()
     m.setParam("limits/time", time_limit)
     m.setParam("parallel/maxnthreads", 1)
+    for p in BLOCK_PROPAGATION:     # propagation off, as in every bound evaluation (llmdw.gcg.gcg_run)
+        m.setParam(p, 0)
     cap_gb = os.environ.get("LLMDW_CHILD_MEMORY_GB")
     if cap_gb:  # graceful stop (status memlimit, dual bound kept) below the hard cap that llmdw.gcg.batch sets
         m.setParam("limits/memory", 0.8 * float(cap_gb) * 1024.0)
@@ -258,7 +265,7 @@ def lookahead_table(mps: str, max_families: int = 6, block_time: float = 60.0, t
     return {"mps": mps, "sense": model.sense, "lp_bound": lp["sign"] * lp["z"] + model.obj_offset, "families": fams,
             "table": table, "truncated": truncated, "seconds": time.time() - t_start,
             "lp_solver": lp["lp_solver"], "lp_seconds": lp["lp_seconds"], "duals_zeroed": lp["duals_zeroed"],
-            "dual_tolerance": lp["dual_tolerance"]}
+            "dual_tolerance": lp["dual_tolerance"], "block_propagation": {p: 0 for p in BLOCK_PROPAGATION}}
 
 
 def main(argv=None):

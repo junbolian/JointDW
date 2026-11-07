@@ -4,7 +4,7 @@ Paper: Appendix F: models with more than six families.
 
 Setting: no linking variables, size limit s = 3 (sets of at most 3 convexified families), the oracle's evaluation setting
 (oracle.evaluate_subset: GCG through PyGCGOpt with a given decomposition, root node, no presolve, cuts or primal
-heuristics, 120 s, one thread, seed 0). Every evaluated set is stored per instance (`<tag>.row.json`) and shared by all
+heuristics, SCIP propagation off, 120 s, one thread, seed 0; failed evaluations retried as in llmdw.gcg.oracle). Every evaluated set is stored per instance (`<tag>.row.json`) and shared by all
 methods, so a set is evaluated once; each method is charged one evaluation for every set in its own order.
 
 Family order: every method uses one order of the families, the first of the 1,000 family orders of llmdw.search.relabel
@@ -55,11 +55,10 @@ from pathlib import Path
 
 import numpy as np
 
-from llmdw.gcg import gcg_run
 from llmdw.search import search_sim
 from llmdw.providers import usage
 from llmdw.instances.families import family_of, read_model, summarize
-from llmdw.gcg.oracle import evaluate_subset
+from llmdw.gcg.oracle import evaluate_subset, lp_bound
 
 S = 3
 BUDGET = 10
@@ -205,18 +204,39 @@ class Instance:
         p = self.dir / "lookahead.json"
         return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
 
+    @property
+    def primal(self):
+        """The best primal solution value recorded by SCIP in any stored evaluation of the model (rule 3 of
+        llmdw.scoring.bounds)."""
+        if not hasattr(self, "_primal"):
+            from llmdw.scoring import bounds
+            rows = [json.loads(p.read_text(encoding="utf-8")) for p in sorted((self.dir / "evals").glob("*.row.json"))]
+            self._primal = bounds.incumbent(rows, self.meta["sense"])
+        return self._primal
+
+    def bound_invalid(self, row: dict):
+        """The rule of llmdw.scoring.bounds that makes the recorded bound of row invalid, or None (no reference
+        optimum for these models: rules 1 and 3)."""
+        from llmdw.scoring import bounds
+        return bounds.invalid_reason(row.get("dual_bound"), self.meta["sense"], self.meta["lp_bound"], None, self.primal)
+
     def gain(self, T) -> float | None:
         """Bound gain of convexifying T (the other families in the master), in minimization units; evaluated once.
-        A stored evaluation is read with the model summary; a missing one is computed from the MPS file."""
-        from llmdw.gcg.oracle import key_tag, subset_key
+        A stored evaluation is used as recorded (its row holds its settings, propagation included); a missing one is
+        computed from the MPS file (llmdw.gcg.oracle.evaluate_subset, propagation off)."""
+        from llmdw.gcg.oracle import key_tag, round_bound, subset_key
         master = set(self.fams) - set(T)
-        stored = (self.dir / "evals" / f"{key_tag(subset_key(master, None))}.row.json").exists()
-        model = self.view if stored else self.model
-        row = evaluate_subset(model, self.mps, self.dir / "evals", master, TIME_LIMIT, seed=0,
-                              integral=self.view.objective_integral)
+        path = self.dir / "evals" / f"{key_tag(subset_key(master, None))}.row.json"
+        if path.exists():
+            row = json.loads(path.read_text(encoding="utf-8"))
+            if "cmp_bound" not in row:
+                row["cmp_bound"] = round_bound(row.get("dual_bound"), self.meta["sense"], self.view.objective_integral)
+        else:
+            row = evaluate_subset(self.model, self.mps, self.dir / "evals", master, TIME_LIMIT, seed=0,
+                                  integral=self.view.objective_integral)
         b = row.get("cmp_bound")
         lp = self.meta["lp_bound"]
-        if b is None or lp is None:
+        if b is None or lp is None or self.bound_invalid(row):
             return None
         return _minform(b, self.meta["sense"]) - _minform(lp, self.meta["sense"])
 
@@ -230,7 +250,7 @@ def prepare_one(name: str, dataset: Path, work: Path) -> dict:
     meta_path = d / "instance.json"
     meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
     if "lp_bound" not in meta:
-        lp = gcg_run.run("lp", mps, str(d / "lp.json"))
+        lp = lp_bound(mps, d)
         meta = {"name": name, "families": fams, "k": len(fams), "sense": model.sense,
                 "lp_status": lp.get("status"), "lp_bound": lp.get("dual_bound") if lp.get("ok") else None}
         meta_path.write_text(json.dumps(meta, indent=1), encoding="utf-8")
@@ -240,7 +260,8 @@ def prepare_one(name: str, dataset: Path, work: Path) -> dict:
                "--block-time", "60", "--total-time", "3600"]
         cap = os.environ.get("LLMDW_CHILD_MEMORY_GB")
         if cap:
-            cmd = ["prlimit", f"--as={int(float(cap) * 2 ** 30)}", "--"] + cmd
+            from llmdw.gcg import address_limit
+            cmd = address_limit.prefix(cap) + cmd
         env = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1")
         with open(d / "lookahead.log", "w", encoding="utf-8") as fh:
             proc = subprocess.run(cmd, cwd=str(Path(__file__).resolve().parents[2]), env=env, stdout=fh,
@@ -413,12 +434,15 @@ def evaluation_rows(inst: Instance) -> list:
     for T in sorted(sets, key=lambda T: (len(T), sorted(T))):
         p = inst.dir / "evals" / f"{key_tag(subset_key(set(inst.fams) - set(T), None))}.row.json"
         if p.exists():
-            rows.append(json.loads(p.read_text(encoding="utf-8")))
+            r = json.loads(p.read_text(encoding="utf-8"))
+            r["bound_invalid"] = inst.bound_invalid(r) if r.get("ok", True) else None
+            rows.append(r)
     return rows
 
 
 def outcome(row: dict) -> str:
-    if row.get("cmp_bound") is None:
+    """converged, stopped at the limit with a bound, or no bound (no comparable bound, or an invalid one)."""
+    if row.get("cmp_bound") is None or row.get("bound_invalid"):
         return "no bound"
     return "converged" if row.get("status") in CONVERGED else "stopped at the limit with a bound"
 
@@ -427,30 +451,39 @@ def report(names: list, out: Path, work: Path, budget=BUDGET) -> tuple[str, dict
     """The section on instances with more than 6 families (markdown) and its tables, written as CSVs to out."""
     res = analyze(names, out, work, budget)
     pos = {r["instance"]: r for r in res["instances"]}
-    per_inst, evals, errors = [], Counter(), Counter()
+    per_inst, evals, errors, invalid = [], Counter(), Counter(), []
     for n in names:
         inst = Instance(n, work)
         rows = evaluation_rows(inst)
         oc = Counter(outcome(r) for r in rows)
         evals.update(oc)
-        errors.update((r.get("error") or r.get("status") or "unknown")[:70] for r in rows if outcome(r) == "no bound")
+        errors.update(("invalid bound (rule " + r["bound_invalid"] + ")") if r.get("bound_invalid") else
+                      (r.get("error") or r.get("status") or "unknown")[:70] for r in rows if outcome(r) == "no bound")
+        bad = [r for r in rows if r.get("bound_invalid")]
+        evals["invalid bound"] += len(bad)
+        invalid += [{"instance": n, "key": r.get("key"), "dual_bound": r.get("dual_bound"), "status": r.get("status"),
+                     "solving_time": r.get("solving_time"), "rule": r["bound_invalid"], "primal_solution": inst.primal}
+                    for r in bad]
         la = inst.lookahead()
-        bounds = [r for r in rows if r.get("cmp_bound") is not None]
-        kind = ("no bound" if not bounds else "positive gain" if pos.get(n, {}).get("positive_gain")
+        with_bound = [r for r in rows if r.get("cmp_bound") is not None and not r.get("bound_invalid")]
+        kind = ("no bound" if not with_bound else "positive gain" if pos.get(n, {}).get("positive_gain")
                 else "bounds, no positive gain")
         per_inst.append({"instance": n, "k": inst.meta["k"], "lp_bound": inst.meta["lp_bound"],
                          "evaluations": len(rows), "converged": oc["converged"],
                          "at_limit_with_bound": oc["stopped at the limit with a bound"], "no_bound": oc["no bound"],
+                         "invalid_bound": len(bad),
                          "best_gain": pos.get(n, {}).get("best_gain"), "outcome": kind,
                          "lookahead_sets": len(la["table"]) if la else 0,
                          "lookahead_sets_planned": len(all_sets(inst.fams)),
                          "lookahead_cut_off": bool(la and la.get("truncated"))})
     outcome_rows = [{"outcome": k, "evaluations": evals[k]} for k in
-                    ("converged", "stopped at the limit with a bound", "no bound")]
+                    ("converged", "stopped at the limit with a bound", "no bound", "invalid bound")]
     error_rows = [{"error": e, "evaluations": c} for e, c in errors.most_common()]
     kinds = Counter(r["outcome"] for r in per_inst)
     tables = {"large_models_per_instance": per_inst, "large_models_outcomes": outcome_rows,
               "large_models_errors": error_rows}
+    if invalid:
+        tables["large_models_invalid_bounds"] = invalid
     for fname, rows in tables.items():
         with open(out / f"{fname}.csv", "w", newline="", encoding="utf-8") as fh:
             w = csv.DictWriter(fh, fieldnames=list(rows[0]))
@@ -479,11 +512,15 @@ def report(names: list, out: Path, work: Path, budget=BUDGET) -> tuple[str, dict
           f"Outcome per instance: {kinds['no bound']} without any bound, {kinds['bounds, no positive gain']} with bounds "
           f"but no positive gain, {kinds['positive gain']} with a positive gain (tolerance 1e-6 max(1, |LP|)). "
           "`large_models_per_instance.csv`.", "",
-          tab(per_inst, ["instance", "k", "evaluations", "converged", "at_limit_with_bound", "no_bound", "best_gain",
-                         "outcome", "lookahead_sets", "lookahead_sets_planned", "lookahead_cut_off"]), "",
+          tab(per_inst, ["instance", "k", "evaluations", "converged", "at_limit_with_bound", "no_bound", "invalid_bound",
+                         "best_gain", "outcome", "lookahead_sets", "lookahead_sets_planned", "lookahead_cut_off"]), "",
           "Evaluation outcomes over all instances (`large_models_outcomes.csv`) and the errors of the evaluations "
-          "without a bound (`large_models_errors.csv`; the same types occurred in the oracle runs):", "",
+          "without a bound (`large_models_errors.csv`; the same types occurred in the oracle runs). A recorded bound "
+          "that llmdw.scoring.bounds marks invalid counts as no bound; the line \"invalid bound\" counts these among "
+          "the evaluations without a bound, and `large_models_invalid_bounds.csv` lists them:", "",
           tab(outcome_rows, ["outcome", "evaluations"]), "", tab(error_rows, ["error", "evaluations"]), "",
+          *([tab(invalid, ["instance", "key", "dual_bound", "status", "solving_time", "rule", "primal_solution"]), ""]
+            if invalid else []),
           "Lookahead cut off at the 3,600 s limit (every set of 1 and 2 families has a value; the triples without one "
           "come last in the lookahead order): " + (", ".join(f"{r['instance']} ({r['lookahead_sets']} of "
                                                               f"{r['lookahead_sets_planned']} sets)" for r in cut)
