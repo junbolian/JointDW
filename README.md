@@ -25,7 +25,7 @@
 <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.13-3776AB.svg" alt="Python 3.13"></a>
 </p>
 
-<img src="docs/figures/lattice.jpg" width="440" alt="Gains of every family-level Dantzig-Wolfe relaxation of a small lot-sizing instance">
+<img src="docs/figures/lattice.png" width="440" alt="Gains of every family-level Dantzig-Wolfe relaxation of a small lot-sizing instance">
 
 <p><i>Share of the integrality gap closed by every family-level Dantzig-Wolfe relaxation of a lot-sizing instance with two items and two periods (B: balance rows, S: setup rows, C: capacity rows). The shaded sets have gain zero, so a search that adds one family at a time never leaves the empty set, while the pairs BS and CS each close 63% of the gap.</i></p>
 
@@ -33,27 +33,28 @@
 
 ## Overview
 
-Dantzig-Wolfe reformulation strengthens the linear relaxation of a mixed-integer program by convexifying a chosen set of constraint families, and every candidate costs a column generation run. The choice is hard when families strengthen the bound only together, because a search that adds one family at a time then stops at the linear relaxation. We call such a set of families a zero-marginal group. This repository holds the code and data of the paper: exact gain tables for small templates and for 24 rich models, the census of zero-marginal groups in MIPLIB-NL, the prompts and the recorded answers of five language-model configurations under four presentations of each model, the one-pass lookahead at an optimal LP dual, the search orders (JointDW, its interleaving with the lookahead, covering orders), and the scripts that build every table and figure of the paper from the released data without calling any API.
+Dantzig-Wolfe reformulation strengthens the linear relaxation of a mixed-integer program by convexifying a chosen set of constraint families, and every candidate costs a column generation run. The choice is hard when families strengthen the bound only together, because a search that adds one family at a time then stops at the linear relaxation. We call such a set of families a zero-marginal group. This repository holds the code and data of the paper: exact gain tables for small templates and for 24 rich models, the census of zero-marginal groups in MIPLIB-NL, 59 standard lot-sizing, network-design and facility-location instances with their gain tables and branch-and-price runs, the prompts and the recorded answers of five language-model configurations under the presentations of each model, the one-pass lookahead at an optimal LP dual and its five-dual version, a learned predictor trained on the gain tables, the search orders (JointDW, its interleaving with the lookahead, covering orders), and the scripts that build every table and figure of the paper from the released data without calling any API.
 
 **Main results**
 
-- Zero-marginal groups are common: a quarter of the MIPLIB-NL models whose bound can be improved have one, and on most of them no single family strengthens the bound at all.
+- Zero-marginal groups are common: three of ten MIPLIB-NL models whose bound can be improved have a certain one and another third a possible one, and on most of them no single family strengthens the bound at all. Every one of the 59 benchmark instances has one, and GCG's detector, which follows the block structure of the matrix, convexifies a set with no gain on 38 of them.
 - When each evaluation may convexify at most *s* of *k* families, every method that observes only bounds needs a covering number of evaluations, of order *k*<sup>*w*</sup>, to find a hidden group of *w* families. A prediction that misses *e* members reduces the cost to Θ(*k*<sup>*e*</sup>) through one staged search that does not need to know *e*, and the search costs only a lower-order term more when the prediction is entirely wrong.
 - The one-pass lookahead at an optimal LP dual is blind to groups whose families share no variable. JointDW takes the prediction of a language model, verifies it with the staged search, and interleaves it with the lookahead at no more than twice the cost of the better of the two.
 - On MIPLIB-NL the strongest language models identify zero-marginal groups about as often as the lookahead and on partly different models. On textbook templates their predictions rest on the names: permuting or anonymizing the family names removes them. Reasoning roughly doubles the accuracy of the same model.
-- On the rich models, which place the classical group among further modeling features, the lookahead finds a best set with its first evaluation of three families. Language models given only the text seldom name the group; GPT-6.1 Sol given every coefficient names it in all but one answer and then needs fewer evaluations than the lookahead for pairs of families.
+- On the rich models, which place the classical group among further modeling features, GPT-6.1 Sol given every coefficient names the classical group in all but one answer, also when the family names are permuted or replaced by labels, and then needs fewer evaluations than the lookahead for pairs of families. A predictor trained on the gain tables of the same class matches this only after hundreds of labeled evaluations and does not carry over to another class.
+- On the benchmark instances the language models name the best pair more often than the lookahead and the detector, and the sets chosen by GPT-6.1 Sol come closest to the branch-and-price time of the best set.
 
-<p align="center"><img src="docs/figures/cost.jpg" width="640" alt="Queries of the staged search and evaluations to find a hidden group"></p>
+<p align="center"><img src="docs/figures/cost.png" width="640" alt="Queries of the staged search and evaluations to find a hidden group"></p>
 
 *Figure 2. (a) Queries of the staged search for k = 6, s = 3, w = 2 and the prediction P = {1, 2}: the queries of stage e contain every hidden group with e members outside P, so a correct prediction is confirmed by the first query. (b) Evaluations to find a hidden group of w = 3 families with s = 6, for predictions that miss e members and without a prediction, with the lower bounds as dashed lines.*
 
-<p align="center"><img src="docs/figures/results.jpg" alt="Census of MIPLIB-NL and recall by presentation"></p>
+<p align="center"><img src="docs/figures/results.png" alt="Census of MIPLIB-NL and recall by presentation"></p>
 
-*Figure 3. (a) Census of MIPLIB-NL: for each model with a positive gain, the largest gain of a single family against the largest gain of a set of families, both as shares of the LP gap; blue marks have a zero-marginal group at the empty set. (b, c) Recall of joint supports under the four presentations, with the recall of the lookahead order as a dashed line.*
+*Figure 3. (a) Census of MIPLIB-NL: for each model with a positive gain, the largest gain of a single family against the largest gain of a set of families, both as shares of the LP gap; marks on the vertical axis have no family that strengthens the bound alone, and blue marks have a zero-marginal group at the empty set. (b, c) Recall of true joint supports under the four presentations on the templates and on MIPLIB-NL; the dashed line is the recall of the lookahead order.*
 
-<p align="center"><img src="docs/figures/rich.jpg" width="640" alt="Rich models: hit@1 and evaluations"></p>
+<p align="center"><img src="docs/figures/rich.png" width="640" alt="Rich models: hit@1 and evaluations"></p>
 
-*Figure 4. Rich models. (a) hit@1 of each configuration given the text (open) and every coefficient (filled). (b) Mean evaluations until a best set is evaluated at s = 2 for lot sizing (LS), network design (ND) and facility location (FL): covering order, lookahead order, and JointDW with GPT-6.1 Sol given the text and every coefficient.*
+*Figure 4. Rich models. (a) hit@1 given the text (open circles) and every coefficient (filled circles), and every coefficient with the names permuted (crosses) or replaced by labels (plus signs) for the two configurations run with the controls. (b) Mean evaluations until a best set is evaluated at s = 2 for lot sizing, network design and facility location: covering order (gray squares), lookahead order at the HiGHS dual (filled diamonds) and with five duals (open diamonds), JointDW with GPT-6.1 Sol given the text (open circles) and every coefficient (filled circles).*
 
 ## Contents
 

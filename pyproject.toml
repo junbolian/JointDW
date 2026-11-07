@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmdw"
-version = "1.0.0"
+version = "1.1.0"
 description = "Zero-marginal groups in Dantzig-Wolfe reformulation: exact gains, the lookahead, JointDW and language-model predictions"
 readme = "README.md"
 license = "MIT"
@@ -31,9 +31,14 @@ solvers = [
   "gurobipy==13.0.3",
   "pandas==2.2.3",
 ]
+learned = [
+  "xgboost-cpu==3.4.1",
+  "scikit-learn==1.9.1",
+  "scipy==1.18.1",
+]
 test = [
   "pytest==9.2.0",
-  "llmdw[solvers]",
+  "llmdw[solvers,learned]",
 ]
 
 [tool.setuptools.packages.find]

@@ -1,29 +1,45 @@
-"""The table bodies of the paper (Tables 1, 2 and 6 to 15) rebuilt from the results CSVs, compared with the bodies of
-the paper in the released data (data/reference_results/paper): every row, its label and every number.
+"""The table bodies of the paper rebuilt from the results CSVs and compared with the reference bodies in tests/reference:
+every row, its label and every number.
 
-The results come from data/reference_results (the released results of the sample of record, fetched by
-scripts/fetch_data.sh) and, when it exists, from results/ (written by scripts/reproduce.sh). Without the released
-data, the test is skipped.
+tests/reference/paper holds the bodies that llmdw.tables.paper writes (table_01.tex, table_02.tex and table_06.tex to
+table_15.tex), tests/reference/experiments the bodies that llmdw.tables.experiments writes (the control presentations,
+the five-dual lookahead, the benchmark instances, the learned predictor and the combined orders), both of the sample of
+record. The results come from data/reference_results (the released results, fetched by scripts/fetch_data.sh) and, when
+it exists, from results/ (written by scripts/reproduce.sh). Without the released data the tests are skipped.
 """
 import re
 from pathlib import Path
 
 import pytest
 
-from llmdw.tables import paper
+from llmdw.tables import experiments, paper
 
 ROOT = Path(__file__).resolve().parents[1]
-REFERENCE = ROOT / "data" / "reference_results" / "paper"
+REFERENCE = ROOT / "tests" / "reference"
 SOURCES = [p for p in (ROOT / "data" / "reference_results", ROOT / "results") if (p / "prediction.csv").exists()]
+EXPERIMENT_SOURCES = [p for p in SOURCES if (p / "experiment_C").is_dir()]
 NUMBER = re.compile(r"\d+\.\d+|\d+")
 
 
-@pytest.mark.skipif(not (SOURCES and REFERENCE.is_dir()), reason="no released data: run scripts/fetch_data.sh first")
+def _compare(built: str, expected: str, name: str) -> None:
+    assert NUMBER.findall(built) == NUMBER.findall(expected), f"numbers of {name}"
+    assert built == expected, name
+
+
+@pytest.mark.skipif(not SOURCES, reason="no released data: run scripts/fetch_data.sh first")
 @pytest.mark.parametrize("source", SOURCES, ids=lambda p: p.name)
-def test_table_bodies_match_the_paper(source):
+def test_paper_table_bodies(source):
     built = paper.tables(source)
     assert sorted(built) == [1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     for n, body in built.items():
-        expected = (REFERENCE / f"table_{n:02d}.tex").read_text(encoding="utf-8")
-        assert NUMBER.findall(body) == NUMBER.findall(expected), f"numbers of Table {n}"
-        assert body == expected, f"Table {n}"
+        _compare(body, (REFERENCE / "paper" / f"table_{n:02d}.tex").read_text(encoding="utf-8"), f"table_{n:02d}")
+
+
+@pytest.mark.skipif(not EXPERIMENT_SOURCES, reason="no released data: run scripts/fetch_data.sh first")
+@pytest.mark.parametrize("source", EXPERIMENT_SOURCES, ids=lambda p: p.name)
+def test_experiment_table_bodies(source, tmp_path):
+    names = experiments.write_tables(source, tmp_path)
+    assert sorted(names) == sorted(p.name for p in (REFERENCE / "experiments").glob("*.tex"))
+    for name in names:
+        _compare((tmp_path / name).read_text(encoding="utf-8"),
+                 (REFERENCE / "experiments" / name).read_text(encoding="utf-8"), name)
