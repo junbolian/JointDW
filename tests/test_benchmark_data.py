@@ -93,3 +93,21 @@ def test_recorded_sources_cover_every_url_with_a_checksum():
     urls = {u for us in sources.FIXED.values() for u in us}
     assert {f["url"] for f in rec["files"]} == urls
     assert all(len(f["sha256"]) == 64 and f["bytes"] > 0 for f in rec["files"])
+
+
+def test_check_compares_built_model_files_with_recorded_sha256(tmp_path):
+    import hashlib
+    import json
+
+    from llmdw.benchmark import standard
+
+    rec, out = tmp_path / "recorded", tmp_path / "built"
+    for name, text in (("a", b"model a"), ("b", b"model b"), ("c", b"model c")):
+        (rec / "instances" / name).mkdir(parents=True)
+        (rec / "instances" / name / "meta.json").write_text(json.dumps({"mps_sha256": hashlib.sha256(text).hexdigest()}))
+    for name, text in (("a", b"model a"), ("b", b"changed")):
+        (out / "instances" / name).mkdir(parents=True)
+        (out / "instances" / name / "model.mps").write_bytes(text)
+    res = standard.cmd_check(out, rec)
+    assert res == {"instances": 3, "identical": 1, "missing": ["c"], "different": ["b"]}
+    assert standard.main(["check", "--out", str(out), "--recorded", str(rec)]) == 1

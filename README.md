@@ -20,6 +20,7 @@
 </p>
 
 <p>
+<a href="paper/JointDW.pdf"><img src="https://img.shields.io/badge/paper-PDF-b31b1b.svg" alt="Paper (PDF)"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/code-MIT-blue.svg" alt="MIT license"></a>
 <a href="DATA.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0%20%2F%20CC%20BY--SA%204.0-lightgrey.svg" alt="Data license"></a>
 <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.13-3776AB.svg" alt="Python 3.13"></a>
@@ -54,7 +55,7 @@ Dantzig-Wolfe reformulation strengthens the linear relaxation of a mixed-integer
 
 <p align="center"><img src="docs/figures/rich.png" width="640" alt="Rich models: hit@1 and evaluations"></p>
 
-*Figure 4. Rich models. (a) hit@1 given the text (open circles) and every coefficient (filled circles), and every coefficient with the names permuted (crosses) or replaced by labels (plus signs) for the two configurations run with the controls. (b) Mean evaluations until a best set is evaluated at s = 2 for lot sizing, network design and facility location: covering order (gray squares), lookahead order at the HiGHS dual (filled diamonds) and with five duals (open diamonds), JointDW with GPT-6.1 Sol given the text (open circles) and every coefficient (filled circles).*
+*Figure 4. Rich models. (a) hit@1 given the text (open circles) and every coefficient (filled circles), and, for two configurations, every coefficient with the names permuted (crosses) or replaced by labels (plus signs). (b) Mean evaluations until a best set is evaluated at s = 2 for lot sizing, network design and facility location: covering order (gray squares), lookahead order at the HiGHS dual (filled diamonds) and with five duals (open diamonds), JointDW with GPT-6.1 Sol given the text (open circles) and every coefficient (filled circles).*
 
 ## Contents
 
@@ -87,7 +88,7 @@ The data are an asset of the release [v1.1](https://github.com/junbolian/JointDW
 
 | Asset | Contents | Size | SHA-256 |
 |---|---|---|---|
-| `jointdw_data_v1.1.tar.gz` | templates and rich models with their exact gain tables; MIPLIB-NL gain tables with the invalid-bound column and the corrected reference optima; lookahead values at one and at five duals; every recorded request and response of the five configurations under the four presentations, the ranked variant, the data variant (on the rich models and on the benchmark instances, with the answers set aside for text added by an endpoint), the two control presentations and the benchmark instances; the rendered prompts; the learned-predictor features; the benchmark gain tables, ground truth and branch-and-price records and logs; the large-model evaluations; the results CSVs behind every table and figure | 87.1 MB | `7ca8b817e2bd52be1f6792ad806aa8aa39213502fc6918762eb7652772a8e0c1` |
+| `jointdw_data_v1.1.tar.gz` | templates and rich models with their exact gain tables; MIPLIB-NL gain tables with the invalid-bound column and the corrected reference optima; lookahead values at one and at five duals; every recorded request and response of the five configurations under the four presentations, the ranked variant, the data variant (on the rich models and on the benchmark instances, with the answers set aside for text added by an endpoint), the two control presentations and the benchmark instances; the rendered prompts; the learned-predictor features; the benchmark gain tables, ground truth and branch-and-price records and logs; the large-model evaluations; the results CSVs behind every table and figure | 87.1 MB | `51d6b5c9c07641ca4f9e4c48bf8d57849e98bcee38b5268993928d5527ef66fe` |
 | `SHA256SUMS` | the checksum of the archive | | |
 
 ```bash
@@ -96,7 +97,7 @@ scripts/fetch_data.sh
 
 downloads the data into `data/` and checks the SHA-256 recorded in the script. [DATA.md](DATA.md) describes every part of the data, how it was produced, the bound validity rule and its license. The MPS files of the MIPLIB-NL models are not part of the release; [Building instances](#building-instances) shows how to export them from MIPLIB-NL.
 
-The benchmark instances are built from public benchmark files that are not redistributed here: `scripts/fetch_benchmarks.sh` downloads them from their original locations (the OR-Library, CommaLAB and suerie.de, with the test list of the GCG repository) into `data/benchmark_raw/` and verifies every data file against the SHA-256 recorded when the instances were built. [DATA.md](DATA.md) names the sources and their terms.
+The benchmark instances are built from public benchmark files that are not redistributed here: `scripts/fetch_benchmarks.sh` downloads them from their original locations (the OR-Library, CommaLAB and suerie.de, with the test list of the GCG repository) into `data/benchmark_raw/` and verifies every data file against the SHA-256 recorded when the instances were built. The archive does not contain the 219 benchmark instance files built from them; `python -m llmdw.benchmark.standard build --raw data/benchmark_raw --out work/benchmark_std` recreates them, and `python -m llmdw.benchmark.standard check --out work/benchmark_std --recorded data/work/benchmark_std` verifies each against the SHA-256 recorded in its `meta.json` (219 of 219 identical on a fresh clone). [DATA.md](DATA.md) names the sources and their terms.
 
 ## Reproducing the paper
 
@@ -129,16 +130,15 @@ scripts/compare_results.sh
 | Table 15 | rich models: evaluations until a best set is evaluated | `scripts/reproduce.sh` | `results/paper/table_12.tex` |
 | Table 16 | ranked variant: coverage@1, coverage@3, and the ranked order interleaved with the lookahead minus the lookahead | `scripts/reproduce.sh` | `results/paper/table_13.tex` |
 | Table 17 | control presentations with every coefficient: hit@1, recall and search cost with the names permuted or replaced by labels | `scripts/reproduce.sh` | `results/paper/experiments/experiment_A_prediction.tex`, `experiment_A_search.tex`; `results/experiment_A/` |
-| Table 18 | learned predictor: hit@1, search cost, labeling cost, by split and variant | `scripts/reproduce.sh` | `results/paper/experiments/learned_predictor.tex`; `results/learned/` |
-| Table 19 | learned predictor against the number of training instances of the same class | `scripts/reproduce.sh` | `results/paper/experiments/learned_predictor_training_size.tex` |
-| Table 20 | benchmark instances, per class and method: hit@1, gain of the first set, branch-and-price time, final gap, instances solved | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_methods.tex`; `results/experiment_C/benchmark_methods.csv` |
-| Table 21 | benchmark instances: paired time differences and time ratios against the true best pair | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_paired_time.tex`, `experiment_C_against_true_best.tex` |
-| @@T_C_PAIRED_HIT1@@ | benchmark instances: paired differences in hit@1 and in the gain of the first set, JointDW against the single-dual and five-dual lookahead and GCG's detector, and the five-dual lookahead against GCG's detector | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_paired_hit1.tex`; `results/experiment_C/benchmark_paired_hit1.csv`, `benchmark_paired_gain.csv` |
-| @@T_RICH_DATA_FIVE@@ | rich models with every coefficient: JointDW and its interleaving minus the five-dual lookahead order, *s* = 2 and 3 | `scripts/reproduce.sh` | `results/paper/experiments/rich_models_data_vs_five_dual.tex`; `results/rich_models_data_paired_five_dual.csv` |
-| @@T_C_DATA_METHODS@@ | benchmark instances with every coefficient shown: hit@1, gain of the first set, branch-and-price time and final gap, time ratio against the true best pair, samples without a joint support | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_data_methods.tex`; `results/experiment_C/benchmark_data_methods.csv`, `benchmark_data_predictions.csv` |
-| @@T_C_DATA_PAIRED@@ | benchmark instances with every coefficient shown: paired differences of hit@1, gain and time against the lookahead at one and five duals, GCG's detector and the original presentation | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_data_paired.tex`; `results/experiment_C/benchmark_data_paired.csv` |
-| Table 22 | paired differences in solve time on MIPLIB-NL against the covering and the lookahead orders | `scripts/reproduce.sh` | `results/paper/table_14.tex` |
-| Table 23 | paired differences in evaluations against the covering and the lookahead orders | `scripts/reproduce.sh` | `results/paper/table_15.tex` |
+| Table 18 | rich models with every coefficient: JointDW and its interleaving with the five-dual lookahead minus the five-dual lookahead, *s* = 2 and *s* = 3, pooled and by class, data presentation and the two control presentations | `scripts/reproduce.sh` | `results/paper/experiments/rich_models_data_vs_five_dual.tex`; `results/rich_models_data_paired_five_dual.csv` |
+| Table 19 | learned predictor: hit@1, search cost, labeling cost, by split and variant | `scripts/reproduce.sh` | `results/paper/experiments/learned_predictor.tex`; `results/learned/` |
+| Table 20 | learned predictor against the number of training instances of the same class | `scripts/reproduce.sh` | `results/paper/experiments/learned_predictor_training_size.tex` |
+| Table 21 | benchmark instances, per class and method: hit@1, gain of the first set, branch-and-price time, final gap, instances solved | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_methods.tex`; `results/experiment_C/benchmark_methods.csv` |
+| Table 22 | benchmark instances: paired time differences and time ratios against the true best pair | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_paired_time.tex`, `experiment_C_against_true_best.tex` |
+| Table 23 | benchmark instances: paired differences in hit@1 and in the gain of the first set, JointDW under the original presentation minus each baseline, and the five-dual lookahead minus GCG's detector | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_paired_hit1.tex`; `results/experiment_C/benchmark_paired_hit1.csv`, `benchmark_paired_gain.csv` |
+| Table 24 | benchmark instances with every coefficient shown: hit@1, gain, time, final gap, solved, time ratio and samples without a joint support of the two configurations, and their paired differences against the baselines and against the original presentation | `scripts/reproduce.sh` | `results/paper/experiments/experiment_C_data_methods.tex`, `experiment_C_data_paired.tex`; `results/experiment_C/benchmark_data_methods.csv`, `benchmark_data_paired.csv`, `benchmark_data_predictions.csv` |
+| Table 25 | paired differences in solve time on MIPLIB-NL against the covering and the lookahead orders | `scripts/reproduce.sh` | `results/paper/table_14.tex` |
+| Table 26 | paired differences in evaluations against the covering and the lookahead orders | `scripts/reproduce.sh` | `results/paper/table_15.tex` |
 | Combined orders (Appendix F) | union-first and stacked orders: search cost against the five-dual lookahead order, JointDW interleaved and the learned order | `scripts/reproduce.sh` | `results/paper/experiments/combined_union_first.tex`, `combined_stacked.tex`; `results/combined/` |
 
 `tests/test_paper_tables.py` rebuilds every table body from the released results and from `results/` and compares it with the reference bodies in `tests/reference/`. On a fresh clone (one workstation, Python 3.13), the installation took 15 s, `scripts/fetch_data.sh` and `scripts/fetch_benchmarks.sh` under a minute, the tests 64 s and `scripts/reproduce.sh` 59 minutes (the learned predictor 20 minutes and the combined orders 31 minutes of it); `scripts/compare_results.sh` then found `results/` identical to `data/reference_results/` (167 files).
@@ -167,7 +167,7 @@ Every request consists of one system message ([`prompts/decomp_v2.md`](prompts/d
 | ranked variant | original, with ranked groups | all five | three | 13 templates, 16 MIPLIB-NL models, 24 rich models |
 | control presentations with coefficients | data permuted, data anonymized | GPT-6.1 Sol, Claude Sonnet 5.5 | three | 24 rich models |
 | benchmark instances | original | GPT-6.1 Sol, Claude Sonnet 5.5 | three | 59 instances, giving eight distinct prompts: one for lot sizing, four for network design and three for facility location |
-| benchmark instances, data variant | the complete instance in CPLEX LP format | GPT-6.1 Sol, Claude Sonnet 5.5 | three | 59 instances, each with its own prompt |
+| benchmark instances with every coefficient | data variant (the complete instance in CPLEX LP format) | GPT-6.1 Sol, Claude Sonnet 5.5 | three | 59 instances, one prompt per instance; the prompt-token guard of this run and the set-aside GPT-6.1 Sol responses: [DATA.md, run setting of the benchmark data variant](DATA.md#run-setting-of-the-benchmark-data-variant) |
 
 The control presentations permute the family names among the families (data permuted) or replace them by labels F1, ..., Fk and V1, ..., Vm (data anonymized), with every coefficient shown. The permutation and the label map of each instance are drawn from a seed derived from the instance name (`--labels per-instance`, `llmdw.prompts.counterfactual`); after the permutation the pair carrying the classical names is a true group in no instance.
 
@@ -263,6 +263,7 @@ config/            public_settings.json (request settings), benchmark_sources.js
 prompts/           system message, user template, ranked and data variants
 tests/             offline tests; tests/reference holds the table bodies of the sample of record
 docs/figures/      the figures of this README
+paper/             JointDW.pdf, the paper
 ```
 
 ## Citation

@@ -5,7 +5,8 @@
 # data/benchmark_raw/, and verify each data file against the SHA-256 recorded when the instances were built
 # (config/benchmark_sources.json). The files are not redistributed with this repository; DATA.md names their sources.
 # Then `python -m llmdw.benchmark.standard build --raw data/benchmark_raw --out work/benchmark_std` rebuilds the model
-# files, whose SHA-256 is recorded in data/work/benchmark_std/instances/*/meta.json.
+# files, whose SHA-256 is recorded in data/work/benchmark_std/instances/*/meta.json, and
+# `python -m llmdw.benchmark.standard check --out work/benchmark_std --recorded data/work/benchmark_std` verifies them.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 python -m llmdw.benchmark.sources --out data/benchmark_raw --recorded config/benchmark_sources.json

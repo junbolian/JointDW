@@ -9,6 +9,12 @@
 #   results/learned/          the learned predictor (from the released features, data/work/features)
 #   results/combined/         the combined orders (union-first, stacked)
 #   results/paper/experiments the table bodies of these experiments (llmdw.tables.experiments)
+# Named outputs of the tables added in the revision:
+#   Table 18  results/paper/experiments/rich_models_data_vs_five_dual.tex (results/rich_models_data_paired_five_dual.csv)
+#   Table 23  results/paper/experiments/experiment_C_paired_hit1.tex (results/experiment_C/benchmark_paired_hit1.csv,
+#             benchmark_paired_gain.csv)
+#   Table 24  results/paper/experiments/experiment_C_data_methods.tex, experiment_C_data_paired.tex
+#             (results/experiment_C/benchmark_data_methods.csv, benchmark_data_paired.csv, benchmark_data_predictions.csv)
 # scripts/compare_results.sh compares results/ with data/reference_results/.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -61,4 +67,8 @@ step "table bodies and figure data of the paper"
 python -m llmdw.tables.figure2 --out $R/figure2.csv
 python -m llmdw.tables.paper --results $R --work $D --out $R/paper
 python -m llmdw.tables.experiments --results $R --out $R/paper/experiments
+for t in "Table 18:rich_models_data_vs_five_dual.tex" "Table 23:experiment_C_paired_hit1.tex" \
+         "Table 24:experiment_C_data_methods.tex" "Table 24:experiment_C_data_paired.tex"; do
+    f=$R/paper/experiments/${t#*:}; [ -s "$f" ] || { echo "missing: ${t%%:*} $f"; exit 1; }; echo "${t%%:*}: $f"
+done
 step "done"

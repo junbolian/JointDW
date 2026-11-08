@@ -284,15 +284,36 @@ def cmd_select(root: Path, parallel: int) -> dict:
     return result
 
 
+def cmd_check(out: Path, recorded: Path) -> dict:
+    """The SHA-256 of every built model file against the one recorded in the released meta.json."""
+    res = {"instances": 0, "identical": 0, "missing": [], "different": []}
+    for meta in sorted((recorded / "instances").glob("*/meta.json")):
+        name = meta.parent.name
+        res["instances"] += 1
+        mps = out / "instances" / name / "model.mps"
+        if not mps.exists():
+            res["missing"].append(name)
+        elif hashlib.sha256(mps.read_bytes()).hexdigest() != json.loads(meta.read_text(encoding="utf-8"))["mps_sha256"]:
+            res["different"].append(name)
+        else:
+            res["identical"] += 1
+    return res
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=("build", "select"))
+    ap.add_argument("cmd", choices=("build", "select", "check"))
     ap.add_argument("--raw")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--recorded", help="check: the released instances (data/work/benchmark_std)")
     ap.add_argument("--parallel", type=int, default=20)
     args = ap.parse_args(argv)
     if args.cmd == "build":
         print(json.dumps(cmd_build(Path(args.raw), Path(args.out))))
+    elif args.cmd == "check":
+        res = cmd_check(Path(args.out), Path(args.recorded))
+        print(json.dumps(res))
+        return 0 if res["identical"] == res["instances"] else 1
     else:
         cmd_select(Path(args.out), args.parallel)
     return 0

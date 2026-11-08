@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 URL="${JOINTDW_DATA_URL:-https://github.com/junbolian/JointDW/releases/download/v1.1}"
 NAME=jointdw_data_v1.1.tar.gz
-SHA256=7ca8b817e2bd52be1f6792ad806aa8aa39213502fc6918762eb7652772a8e0c1
+SHA256=51d6b5c9c07641ca4f9e4c48bf8d57849e98bcee38b5268993928d5527ef66fe
 mkdir -p data
 curl -fsSL -o "data/$NAME" "$URL/$NAME"
 echo "$SHA256  data/$NAME" | sha256sum -c -
