@@ -6,7 +6,8 @@
 <b>Junbo Jacob Lian</b><sup>1,2,3</sup> &nbsp;·&nbsp;
 <b>Kaixuan Chen</b><sup>3</sup> &nbsp;·&nbsp;
 <b>Hanzhang Qin</b><sup>1</sup> &nbsp;·&nbsp;
-<b>Chaoyu Zhang</b><sup>4</sup> &nbsp;·&nbsp;
+<b>Huiling Chen</b><sup>4</sup> &nbsp;·&nbsp;
+<b>Chaoyu Zhang</b><sup>5</sup> &nbsp;·&nbsp;
 <b>Chung-Piaw Teo</b><sup>1</sup>
 </p>
 
@@ -14,7 +15,8 @@
 <sup>1</sup> Institute of Operations Research and Analytics, National University of Singapore<br>
 <sup>2</sup> Wenzhou Buyi Pharmacy<br>
 <sup>3</sup> McCormick School of Engineering, Northwestern University<br>
-<sup>4</sup> Department of Decision Analytics and Operations, City University of Hong Kong
+<sup>4</sup> College of Computer Science and Artificial Intelligence, Wenzhou University<br>
+<sup>5</sup> Department of Decision Analytics and Operations, City University of Hong Kong
 </p>
 
 <p>
@@ -268,7 +270,7 @@ docs/figures/      the figures of this README
 ```bibtex
 @misc{lian2026jointdw,
   title         = {Do Language Models Know Which Constraints Belong Together?},
-  author        = {Lian, Junbo Jacob and Chen, Kaixuan and Qin, Hanzhang and Zhang, Chaoyu and Teo, Chung-Piaw},
+  author        = {Lian, Junbo Jacob and Chen, Kaixuan and Qin, Hanzhang and Chen, Huiling and Zhang, Chaoyu and Teo, Chung-Piaw},
   year          = {2026},
   note          = {Preprint},
   eprint        = {2611.05726},
