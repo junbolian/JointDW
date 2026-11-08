@@ -14,7 +14,6 @@ authors = [
   {name = "Junbo Jacob Lian"},
   {name = "Kaixuan Chen"},
   {name = "Hanzhang Qin"},
-  {name = "Huiling Chen"},
   {name = "Chung-Piaw Teo"},
 ]
 dependencies = [

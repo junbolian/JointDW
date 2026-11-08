@@ -17,8 +17,6 @@ authors:
     given-names: Kaixuan
   - family-names: Qin
     given-names: Hanzhang
-  - family-names: Chen
-    given-names: Huiling
   - family-names: Zhang
     given-names: Chaoyu
     affiliation: "City University of Hong Kong"
@@ -34,8 +32,6 @@ preferred-citation:
       given-names: Kaixuan
     - family-names: Qin
       given-names: Hanzhang
-    - family-names: Chen
-      given-names: Huiling
     - family-names: Zhang
       given-names: Chaoyu
       affiliation: "City University of Hong Kong"
