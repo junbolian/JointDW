@@ -3,6 +3,13 @@ message: "If you use this code or data, please cite the paper below."
 title: "JointDW"
 license: MIT
 repository-code: "https://github.com/junbolian/JointDW"
+identifiers:
+  - type: other
+    value: "arXiv:2611.05726"
+    description: "The paper on arXiv"
+  - type: url
+    value: "https://arxiv.org/abs/2611.05726"
+    description: "The paper on arXiv"
 authors:
   - family-names: Lian
     given-names: Junbo Jacob
@@ -36,3 +43,8 @@ preferred-citation:
       given-names: Chung-Piaw
   year: 2026
   notes: "Preprint"
+  url: "https://arxiv.org/abs/2611.05726"
+  identifiers:
+    - type: other
+      value: "arXiv:2611.05726"
+      description: "arXiv identifier (archivePrefix arXiv, primaryClass cs.LG)"

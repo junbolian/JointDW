@@ -26,6 +26,9 @@ METHOD_NAMES = {"lookahead (single dual)": "Lookahead, HiGHS dual", "lookahead (
                 "GCG default": "GCG's detector"}
 CFG_ORDER = ["Claude Sonnet 5.5", "GPT-6.1 Sol", "Grok 4.20 (Reasoning)", "Grok 4.20 (Non-Reasoning)",
              "DeepSeek-V4-Pro (Non-Thinking)"]
+# paired time differences (s) below this in absolute value are floating-point residue of identical times: printed as
+# 0.0 without an asterisk in the paired-time table
+TIME_RESIDUE = 1e-9
 
 
 def clean_text(s: str) -> str:
@@ -151,8 +154,11 @@ def write_tables(results: Path, out: Path) -> list:
     for cls in ["lot_sizing", "network_design", "facility_location", "all"]:
         lines.append(f"\\multicolumn{{5}}{{@{{}}l}}{{\\emph{{{CLASSES.get(cls, 'All classes')}}}}} \\\\")
         for r in [r for r in CP if r["class"] == cls]:
+            m, se, star = r["mean_difference"], r["se_difference"], r["asterisk"]
+            if m not in ("", None) and abs(float(m)) < TIME_RESIDUE:   # floating-point residue of identical times
+                m, se, star = 0.0, (se if se in ("", None) or abs(float(se)) >= TIME_RESIDUE else 0.0), ""
             lines.append(f"JointDW, {r['configuration']} & {r['against']} & {r['n_instances']} & "
-                         f"{pm(r['mean_difference'], r['se_difference'], 1, r['asterisk'])} & {r['failed_twice_instances'] or '--'} \\\\")
+                         f"{pm(m, se, 1, star)} & {r['failed_twice_instances'] or '--'} \\\\")
     tex_table(out, "experiment_C_paired_time.tex", "experiment_C_benchmark/paired_jointdw.csv",
               "% Experiment C: JointDW minus each baseline, paired time difference (s). Columns: configuration; baseline; "
               "instances; difference $\\pm$ standard error (asterisk: 95 percent interval excludes 0); runs failed twice. "

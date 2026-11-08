@@ -84,11 +84,11 @@ pip install -e ".[test]"
 
 ## Data
 
-The data are an asset of the release [v1.1](https://github.com/junbolian/JointDW/releases/tag/v1.1); v1.1 supersedes v1.0.
+The data are an asset of the release [v1.1.1](https://github.com/junbolian/JointDW/releases/tag/v1.1.1), which supersedes v1.1 and v1.0.
 
 | Asset | Contents | Size | SHA-256 |
 |---|---|---|---|
-| `jointdw_data_v1.1.tar.gz` | templates and rich models with their exact gain tables; MIPLIB-NL gain tables with the invalid-bound column and the corrected reference optima; lookahead values at one and at five duals; every recorded request and response of the five configurations under the four presentations, the ranked variant, the data variant (on the rich models and on the benchmark instances, with the answers set aside for text added by an endpoint), the two control presentations and the benchmark instances; the rendered prompts; the learned-predictor features; the benchmark gain tables, ground truth and branch-and-price records and logs; the large-model evaluations; the results CSVs behind every table and figure | 87.1 MB | `51d6b5c9c07641ca4f9e4c48bf8d57849e98bcee38b5268993928d5527ef66fe` |
+| `jointdw_data_v1.1.1.tar.gz` | templates and rich models with their exact gain tables; MIPLIB-NL gain tables with the invalid-bound column and the corrected reference optima; lookahead values at one and at five duals; every recorded request and response of the five configurations under the four presentations, the ranked variant, the data variant (on the rich models and on the benchmark instances, with the answers set aside for text added by an endpoint), the two control presentations and the benchmark instances; the rendered prompts; the learned-predictor features; the benchmark gain tables, ground truth and branch-and-price records and logs; the large-model evaluations; the results CSVs behind every table and figure | 87.1 MB | `50d407c37cb39e7e9cc92899084b405b36ead99ebd7b516c7473a7ca40319f0b` |
 | `SHA256SUMS` | the checksum of the archive | | |
 
 ```bash
