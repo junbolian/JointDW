@@ -20,7 +20,7 @@
 </p>
 
 <p>
-<a href="paper/JointDW.pdf"><img src="https://img.shields.io/badge/paper-PDF-b31b1b.svg" alt="Paper (PDF)"></a>
+<a href="https://arxiv.org/abs/2611.05726"><img src="https://img.shields.io/badge/arXiv-2611.05726-b31b1b.svg" alt="arXiv 2611.05726"></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/code-MIT-blue.svg" alt="MIT license"></a>
 <a href="DATA.md"><img src="https://img.shields.io/badge/data-CC%20BY%204.0%20%2F%20CC%20BY--SA%204.0-lightgrey.svg" alt="Data license"></a>
 <a href="pyproject.toml"><img src="https://img.shields.io/badge/python-3.13-3776AB.svg" alt="Python 3.13"></a>
@@ -34,7 +34,7 @@
 
 ## Overview
 
-Dantzig-Wolfe reformulation strengthens the linear relaxation of a mixed-integer program by convexifying a chosen set of constraint families, and every candidate costs a column generation run. The choice is hard when families strengthen the bound only together, because a search that adds one family at a time then stops at the linear relaxation. We call such a set of families a zero-marginal group. This repository holds the code and data of the paper: exact gain tables for small templates and for 24 rich models, the census of zero-marginal groups in MIPLIB-NL, 59 standard lot-sizing, network-design and facility-location instances with their gain tables and branch-and-price runs, the prompts and the recorded answers of five language-model configurations under the presentations of each model, the one-pass lookahead at an optimal LP dual and its five-dual version, a learned predictor trained on the gain tables, the search orders (JointDW, its interleaving with the lookahead, covering orders), and the scripts that build every table and figure of the paper from the released data without calling any API.
+Dantzig-Wolfe reformulation strengthens the linear relaxation of a mixed-integer program by convexifying a chosen set of constraint families, and every candidate costs a column generation run. The choice is hard when families strengthen the bound only together, because a search that adds one family at a time then stops at the linear relaxation. We call such a set of families a zero-marginal group. This repository holds the code and data of the [paper](https://arxiv.org/abs/2611.05726): exact gain tables for small templates and for 24 rich models, the census of zero-marginal groups in MIPLIB-NL, 59 standard lot-sizing, network-design and facility-location instances with their gain tables and branch-and-price runs, the prompts and the recorded answers of five language-model configurations under the presentations of each model, the one-pass lookahead at an optimal LP dual and its five-dual version, a learned predictor trained on the gain tables, the search orders (JointDW, its interleaving with the lookahead, covering orders), and the scripts that build every table and figure of the paper from the released data without calling any API.
 
 **Main results**
 
@@ -141,7 +141,7 @@ scripts/compare_results.sh
 | Table 26 | paired differences in evaluations against the covering and the lookahead orders | `scripts/reproduce.sh` | `results/paper/table_15.tex` |
 | Combined orders (Appendix F) | union-first and stacked orders: search cost against the five-dual lookahead order, JointDW interleaved and the learned order | `scripts/reproduce.sh` | `results/paper/experiments/combined_union_first.tex`, `combined_stacked.tex`; `results/combined/` |
 
-`tests/test_paper_tables.py` rebuilds every table body from the released results and from `results/` and compares it with the reference bodies in `tests/reference/`. On a fresh clone (one workstation, Python 3.13), the installation took 15 s, `scripts/fetch_data.sh` and `scripts/fetch_benchmarks.sh` under a minute, the tests 64 s and `scripts/reproduce.sh` 59 minutes (the learned predictor 20 minutes and the combined orders 31 minutes of it); `scripts/compare_results.sh` then found `results/` identical to `data/reference_results/` (167 files).
+`tests/test_paper_tables.py` rebuilds every table body from the released results and from `results/` and compares it with the reference bodies in `tests/reference/`. On a fresh clone of this repository (one workstation, Python 3.13), the installation took 15 s, `scripts/fetch_data.sh` 4 s, `scripts/fetch_benchmarks.sh` 24 s, rebuilding and checking the 219 benchmark instance files 63 s, the tests 59 s and `scripts/reproduce.sh` 54 minutes (the learned predictor 18 minutes and the combined orders 29 minutes of it); `scripts/compare_results.sh` then found `results/` identical to `data/reference_results/` (167 files).
 
 ## Running the language models
 
@@ -263,17 +263,20 @@ config/            public_settings.json (request settings), benchmark_sources.js
 prompts/           system message, user template, ranked and data variants
 tests/             offline tests; tests/reference holds the table bodies of the sample of record
 docs/figures/      the figures of this README
-paper/             JointDW.pdf, the paper
 ```
 
 ## Citation
 
 ```bibtex
 @misc{lian2026jointdw,
-  title  = {Do Language Models Know Which Constraints Belong Together?},
-  author = {Lian, Junbo Jacob and Chen, Kaixuan and Qin, Hanzhang and Chen, Huiling and Zhang, Chaoyu and Teo, Chung-Piaw},
-  year   = {2026},
-  note   = {Preprint}
+  title         = {Do Language Models Know Which Constraints Belong Together?},
+  author        = {Lian, Junbo Jacob and Chen, Kaixuan and Qin, Hanzhang and Chen, Huiling and Zhang, Chaoyu and Teo, Chung-Piaw},
+  year          = {2026},
+  note          = {Preprint},
+  eprint        = {2611.05726},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2611.05726}
 }
 ```
 
