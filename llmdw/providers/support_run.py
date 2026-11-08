@@ -141,6 +141,12 @@ def main(argv=None):
                     help="label rule of the permuted and anonymized presentations (llmdw.prompts.counterfactual)")
     ap.add_argument("--samples", type=int, default=1, help="independent answers per instance and condition")
     ap.add_argument("--parallel", type=int, default=1, help="instances processed at the same time")
+    ap.add_argument("--prompt-tokens-per-char", type=float,
+                    help="factor of the prompt-token guard for this run (llmdw.providers.llm_client.inflated_prompt_tokens), "
+                         "in place of the factor of the configuration; nothing that is sent changes")
+    ap.add_argument("--timeout", type=float,
+                    help="client timeout in seconds for this run (LLMDW_TIMEOUT), in place of timeout_s of the configuration; "
+                         "nothing that is sent changes")
     ap.add_argument("--stop-file", action="append", default=[],
                     help="no new call starts once this file exists (calls in flight finish and are kept); repeatable")
     args = ap.parse_args(argv)
@@ -150,6 +156,14 @@ def main(argv=None):
 
         from llmdw.providers import settings
         os.environ.update(settings.environment(args.config))
+    if args.prompt_tokens_per_char is not None:          # a run setting: after the configuration, so that it applies
+        import os
+
+        os.environ["LLMDW_PROMPT_TOKENS_PER_CHAR"] = str(args.prompt_tokens_per_char)
+    if args.timeout is not None:                         # a run setting: after the configuration, so that it applies
+        import os
+
+        os.environ["LLMDW_TIMEOUT"] = str(args.timeout)
     prompt_version = PROMPTS[args.prompt]
     if prompt_version != "v2":                         # the cache key includes the user prompt file
         import os

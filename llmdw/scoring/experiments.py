@@ -261,6 +261,65 @@ def five_duals_tables(work: Path, five_root: Path, answer_dirs: dict) -> dict:
             "five_duals_duals": duals}
 
 
+def data_five_dual_tables(work: Path, five_root: Path, data_dirs: dict, control_dirs: dict) -> dict:
+    """Rich models with every coefficient shown: JointDW and JointDW interleaved with the five-dual lookahead order,
+    each minus the five-dual lookahead order, in evaluations until a best set is evaluated, for s = 2 and 3, pooled over
+    the 24 rich models and per class. data_dirs: {official name: folder of the data-variant answers}; control_dirs:
+    {official name: folder of the control answers (data permuted, data anonymized)}. Every instance has its own prompt
+    when the coefficients are shown, so the bootstrap resamples instances (prompt groups of one instance)."""
+    from llmdw.scoring import rich_models
+    from llmdw.search import relabel
+
+    cluster.set_groups({})
+    relabel.clear()
+    insts = rich_models.load_instances(work)
+    by = {i["name"]: i for i in insts}
+    rinst = {i["name"]: {"summary": i["model"].summary, "truth": i["truth"], "class": i["class"]} for i in insts}
+    five = {}
+    for n, i in rinst.items():
+        p = five_root / "rich_models" / n / "five_duals.json"
+        if p.exists():
+            five[n] = {**i["truth"], "lookahead": _five_list(p, len(i["truth"]["families"]))}
+    names = [n for n in by if n in five and five[n]["table"] and max(five[n]["table"].values()) > 0]
+    recs = []
+    for cfg, d in data_dirs.items():
+        recs += [{**r, "cfg": cfg, "pres": "data"} for r in results.load_answers(Path(d), rinst)
+                 if r["condition"] == "original"]
+    for cfg, d in control_dirs.items():
+        recs += [{**r, "cfg": cfg, "pres": CONTROL[r["condition"]]} for r in results.load_answers(Path(d), rinst)
+                 if r["condition"] in ("permuted", "anonymized")]
+    order, acc = defaultdict(dict), defaultdict(lambda: defaultdict(list))
+    for n in names:
+        k = len(five[n]["families"])
+        for s in (2, 3):
+            order[s][n] = results.run_value(results.search_runs(n, five[n], min(s, k - 1), ("lookahead",))[0])
+    for r in recs:
+        n = r["instance"]
+        if n not in names:
+            continue
+        k = len(five[n]["families"])
+        P = results.support_anchor(r, five[n]["families"])
+        for s in (2, 3):
+            for meth, kind in (("JointDW", "model"), ("JointDW interleaved with the five-dual order", "interleaved")):
+                acc[(r["cfg"], r["pres"], meth, s)][n].append(
+                    results.run_value(results.search_runs(n, five[n], min(s, k - 1), (kind, P))[0]))
+    rows = []
+    classes = [("pooled", None)] + [(c, c) for c in rich_models.CLASSES]
+    for (cfg, pres, meth, s), d in acc.items():
+        vals = {n: (None if any(x is None for x in v) else sum(v) / len(v)) for n, v in d.items()}
+        for cls, c in classes:
+            sel = [n for n in names if c is None or by[n]["class"] == c]
+            rows.append({"configuration": cfg, "presentation": pres, "class": cls, "s": s, "method": meth,
+                         "contrast": f"{meth} minus five-dual lookahead order",
+                         **_paired({n: vals.get(n) for n in sel}, {n: order[s][n] for n in sel}),
+                         "n_failed": sum(1 for n in sel if n in vals and vals[n] is None)})
+    pres_order = ["data", "data, permuted", "data, anonymized"]
+    class_order = ["pooled"] + list(rich_models.CLASSES)
+    rows.sort(key=lambda r: (r["configuration"], pres_order.index(r["presentation"]), r["method"], r["s"],
+                             class_order.index(r["class"])))
+    return {"rich_models_data_paired_five_dual": rows}
+
+
 def write(tables: dict, out: Path) -> None:
     out.mkdir(parents=True, exist_ok=True)
     for name, rows in tables.items():
@@ -273,10 +332,10 @@ def _pairs(xs):
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("cmd", choices=("control", "five_duals"))
+    ap.add_argument("cmd", choices=("control", "five_duals", "data_five_duals"))
     ap.add_argument("--work", required=True, help="the root that holds work/")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--data", nargs="*", default=[], help="control: NAME=folder of the data-variant answers")
+    ap.add_argument("--data", nargs="*", default=[], help="control, data_five_duals: NAME=folder of the data-variant answers")
     ap.add_argument("--controls", nargs="*", default=[], help="control: NAME=folder of the control answers")
     ap.add_argument("--five-duals", help="five_duals: root of the five-dual results")
     ap.add_argument("--answers", nargs="*", default=[], help="five_duals: SET:NAME=folder (SET templates, miplib, "
@@ -285,6 +344,8 @@ def main(argv=None) -> int:
     work = Path(args.work).expanduser()
     if args.cmd == "control":
         write(control_tables(work, _pairs(args.data), _pairs(args.controls)), Path(args.out))
+    elif args.cmd == "data_five_duals":
+        write(data_five_dual_tables(work, Path(args.five_duals), _pairs(args.data), _pairs(args.controls)), Path(args.out))
     else:
         dirs = defaultdict(dict)
         for x in args.answers:

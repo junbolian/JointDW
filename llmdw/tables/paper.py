@@ -13,7 +13,9 @@ Files written to --out:
   figure_3a_<kind>.csv            census: largest single-family gain and largest set gain (shares of the LP gap, at most
                                   1) of each model with a positive gain, per kind of group
   figure_3b_templates.csv, figure_3c_miplib.csv   recall by presentation per configuration, and the lookahead recall
-  figure_4a.csv, figure_4b.csv    rich models: hit@1 given the text and every coefficient; evaluations at s = 2 by class
+  figure_4a.csv, figure_4b.csv    rich models: hit@1 given the text, every coefficient and the two control presentations
+                                  (results/experiment_A); evaluations at s = 2 by class, with the five-dual lookahead
+                                  (results/learned)
 
 Usage
 -----
@@ -288,19 +290,39 @@ def figures(results: Path, out: Path) -> list[str]:
         names.append(fname)
     text = {r["config"]: r for r in read(results, "rich_models_prediction.csv") if r["class"] == "all"}
     data = {r["config"]: r for r in read(results, "rich_models_with_data_prediction.csv") if r["class"] == "all"}
+    # the control presentations with every coefficient (results/experiment_A), for the configurations run with them
+    ctrl_path = results / "experiment_A" / "control_prediction.csv"
+    ctrl = {}
+    if ctrl_path.exists():
+        with open(ctrl_path, newline="", encoding="utf-8") as fh:
+            ctrl = {(r["configuration"], r["presentation"]): r for r in csv.DictReader(fh) if r["class"] == "pooled"}
+
+    def control(c, pres):
+        r = ctrl.get((c, pres))
+        return f"{float(r['hit1_mean']):.3f}" if r else ""
     with open(out / "figure_4a.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["configuration", "hit1_text", "hit1_every_coefficient"])
+        w.writerow(["configuration", "hit1_text", "hit1_every_coefficient", "hit1_data_permuted", "hit1_data_anonymized"])
         for c in cfg:
-            w.writerow([c, f"{float(text[c]['hit1']):.3f}", f"{float(data[c]['hit1']):.3f}"])
+            w.writerow([c, f"{float(text[c]['hit1']):.3f}", f"{float(data[c]['hit1']):.3f}",
+                        control(c, "data, permuted"), control(c, "data, anonymized")])
     s0 = {(r["class"], r["s"], r["method"], r["config"]): r for r in read(results, "rich_models_search.csv")}
     s1 = {(r["class"], r["s"], r["method"], r["config"]): r for r in read(results, "rich_models_with_data_search.csv")}
     gpt = FIGURE_4B_CONFIGURATION
+    # the five-dual lookahead order by class (its cost does not depend on the split: results/learned)
+    five_path = results / "learned" / "learned_search_within_class_structural.csv"
+    five = {}
+    if five_path.exists():
+        with open(five_path, newline="", encoding="utf-8") as fh:
+            five = {r["class"]: r for r in csv.DictReader(fh) if r["set"] == "rich_models" and r["s"] == "2"
+                    and r["method"] == "five-dual lookahead order"}
     with open(out / "figure_4b.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["class", "covering", "lookahead", f"jointdw_text ({gpt})", f"jointdw_every_coefficient ({gpt})"])
+        w.writerow(["class", "covering", "lookahead", "lookahead_five_duals", f"jointdw_text ({gpt})",
+                    f"jointdw_every_coefficient ({gpt})"])
         for cls, short in CLASSES:
             w.writerow([short] + [f"{float(s0[(cls, '2', m, '')]['mean']):.2f}" for m in ("covering", "lookahead")]
+                       + [f"{float(five[cls]['evaluations_mean']):.2f}" if cls in five else ""]
                        + [f"{float(s0[(cls, '2', 'jointdw', gpt)]['mean']):.2f}",
                           f"{float(s1[(cls, '2', 'jointdw', gpt)]['mean']):.2f}"])
     names += ["figure_4a.csv", "figure_4b.csv"]

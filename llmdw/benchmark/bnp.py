@@ -27,6 +27,8 @@ Usage
 -----
 python -m llmdw.benchmark.bnp plan --root work/benchmark_std --names ... --answers GPT-6.1\\ Sol=work/benchmark_std/answers/gpt-6.1-sol ...
 python -m llmdw.benchmark.bnp run --root work/benchmark_std --names ... --parallel 18
+python -m llmdw.benchmark.bnp plan --plan-file bnp_plan_data.json --root ... --names ... --answers "GPT-6.1 Sol, data=..."
+python -m llmdw.benchmark.bnp run --plan-file bnp_plan_data.json --root ... --names ... --parallel 8
 """
 from __future__ import annotations
 
@@ -63,7 +65,7 @@ def _first_of_order(fams, lookahead_table: dict):
     return sorted(order[0]) if order else None
 
 
-def plan(root: Path, name: str, answers: dict) -> dict:
+def plan(root: Path, name: str, answers: dict, plan_file: str = "bnp_plan.json") -> dict:
     from llmdw.instances.families import read_model, summarize
     from llmdw.scoring import results
 
@@ -93,7 +95,7 @@ def plan(root: Path, name: str, answers: dict) -> dict:
                                 "set": sorted(results.support_anchor(r, fams)),
                                 "first_support": sorted((r.get("supports") or [{}])[0].get("families") or [])
                                 if r.get("supports") else None} for r in recs]
-    (d / "bnp_plan.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
+    (d / plan_file).write_text(json.dumps(out, indent=1), encoding="utf-8")
     return out
 
 
@@ -176,8 +178,8 @@ def run_one(job) -> dict:
             "gap_reference": "SCIP reference optimum (no primal bound from the failed runs)"}
 
 
-def jobs_of(root: Path, name: str) -> list:
-    p = json.loads((root / "instances" / name / "bnp_plan.json").read_text())
+def jobs_of(root: Path, name: str, plan_file: str = "bnp_plan.json") -> list:
+    p = json.loads((root / "instances" / name / plan_file).read_text())
     sets = {set_key(p["methods"]["true_best"]): p["methods"]["true_best"]}
     for m in ("lookahead", "lookahead_five_duals", "gcg_detected"):
         if p["methods"].get(m):
@@ -257,18 +259,21 @@ def main(argv=None) -> int:
     ap.add_argument("--names", required=True)
     ap.add_argument("--answers", nargs="*", default=[], help="NAME=DIR, the official name and the answer folder")
     ap.add_argument("--parallel", type=int, default=18)
+    ap.add_argument("--plan-file", default="bnp_plan.json",
+                    help="the plan file of each instance (bnp_plan_data.json: the data variant on the benchmark instances; "
+                         "its runs share the rows of identical sets)")
     args = ap.parse_args(argv)
     root, names = Path(args.root), args.names.split(",")
     if args.cmd == "plan":
         answers = dict(a.split("=", 1) for a in args.answers)
         for n in names:
-            p = plan(root, n, answers)
+            p = plan(root, n, answers, args.plan_file)
             print(json.dumps({"name": n, **{k: v for k, v in p["methods"].items() if not isinstance(v, list)
                                             or not v or not isinstance(v[0], dict)}}), flush=True)
     elif args.cmd == "report":
         report(root, names)
     else:
-        todo = [j for n in names for j in jobs_of(root, n)]
+        todo = [j for n in names for j in jobs_of(root, n, args.plan_file)]
         print(f"{len(todo)} branch-and-price runs", flush=True)
         with ThreadPoolExecutor(max_workers=args.parallel) as pool:
             for r in pool.map(run_one, todo):

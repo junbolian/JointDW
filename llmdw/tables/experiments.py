@@ -22,6 +22,8 @@ EXACT = {**CLASSES, "templates": "Templates", "miplib": "MIPLIB-NL", "rich_model
          "within_class": "within class", "leave_one_class_out": "leave one class out",
          "miplibnl_leave_one_out": "MIPLIB-NL leave one out", "training_size": "training size",
          "structural+lookahead": "structural + lookahead"}
+METHOD_NAMES = {"lookahead (single dual)": "Lookahead, HiGHS dual", "lookahead (five duals)": "Lookahead, five duals",
+                "GCG default": "GCG's detector"}
 CFG_ORDER = ["Claude Sonnet 5.5", "GPT-6.1 Sol", "Grok 4.20 (Reasoning)", "Grok 4.20 (Non-Reasoning)",
              "DeepSeek-V4-Pro (Non-Thinking)"]
 
@@ -270,6 +272,79 @@ def write_tables(results: Path, out: Path) -> list:
               "% Combined orders, stacked learned predictor. Columns: set; order and answers; $s=2$; $s=3$ (evaluations, mean "
               "$\\pm$ standard error). Sources: data/combined_orders/stacked_search_*.csv", lines)
 
+    # benchmark instances: paired differences of hit@1 and of the gain of the first set
+    hp, gp = R / "experiment_C/benchmark_paired_hit1.csv", R / "experiment_C/benchmark_paired_gain.csv"
+    if hp.exists() and gp.exists():
+        H, G = dict_rows(hp), dict_rows(gp)
+        gain = {(r["configuration"], r["against"], r["class"]): r for r in G}
+        lines = []
+        for r in H:
+            g = gain[(r["configuration"], r["against"], r["class"])]
+            lines.append(f"{METHOD_NAMES.get(r['configuration'], 'JointDW, ' + r['configuration'])} & "
+                         f"{METHOD_NAMES[r['against']]} & {CLASSES.get(r['class'], 'All classes')} & {r['n_instances']} & "
+                         f"{pm(r['mean_difference'], r['se_difference'], 2, r['asterisk'])} & "
+                         f"{pm(g['mean_difference'], g['se_difference'], 2, g['asterisk'])} \\\\")
+        tex_table(out, "experiment_C_paired_hit1.tex", "", "", lines)
+    # rich models with every coefficient: JointDW and its interleaving minus the five-dual lookahead order
+    dp = R / "rich_models_data_paired_five_dual.csv"
+    if dp.exists():
+        D = dict_rows(dp)
+        idx = {(r["configuration"], r["presentation"], r["class"], r["method"], r["s"]): r for r in D}
+        keys = []
+        for r in D:
+            if (r["configuration"], r["presentation"]) not in keys:
+                keys.append((r["configuration"], r["presentation"]))
+        keys.sort(key=lambda k: (CFG_ORDER.index(k[0]), ["data", "data, permuted", "data, anonymized"].index(k[1])))
+        lines = []
+        for cls in ["pooled", "lot_sizing", "network_design", "facility_location"]:
+            lines.append(f"\\multicolumn{{5}}{{@{{}}l}}{{\\emph{{{'Pooled' if cls == 'pooled' else CLASSES[cls]}}}}} \\\\")
+            for cfg, pres in keys:
+                cells = [f"{cfg}, {pres}"]
+                for meth in ("JointDW", "JointDW interleaved with the five-dual order"):
+                    for sz in ("2", "3"):
+                        r = idx.get((cfg, pres, cls, meth, sz))
+                        cells.append(pm(r["mean_difference"], r["se_difference"], 2, r["asterisk"]) if r else "--")
+                lines.append(" & ".join(cells) + " \\\\")
+        tex_table(out, "rich_models_data_vs_five_dual.tex", "", "", lines)
+    # benchmark instances, data variant (every coefficient shown): methods and paired differences
+    mp, pp = R / "experiment_C/benchmark_data_methods.csv", R / "experiment_C/benchmark_data_paired.csv"
+    if mp.exists() and pp.exists():
+        def label(m):
+            if m == "true best set":
+                return "True best set"
+            if m in METHOD_NAMES:
+                return METHOD_NAMES[m]
+            return f"JointDW, {m[:-len(', data')]}, data" if m.endswith(", data") else f"JointDW, {m}, original"
+        M = dict_rows(mp)
+        lines = []
+        for cls in ["lot_sizing", "network_design", "facility_location", "all"]:
+            lines.append(f"\\multicolumn{{8}}{{@{{}}l}}{{\\emph{{{CLASSES.get(cls, 'All classes')}}}}} \\\\")
+            for r in [r for r in M if r["class"] == cls]:
+                ratio = ("--" if r["method"] == "true best set" else
+                         f"{f2(r['geometric_mean_ratio'], 3)}{'$^{*}$' if r['ratio_asterisk'] == '*' else ''} "
+                         f"[{f2(r['ratio_lo'], 3)}, {f2(r['ratio_hi'], 3)}]")
+                nojs = (f"{r['n_samples_without_joint_support']}/{r['n_samples']}"
+                        if r.get("n_samples_without_joint_support") not in (None, "") else "--")
+                lines.append(f"{label(r['method'])} & {pm(r['hit_mean'], r['hit_se'])} & {pm(r['gain_mean'], r['gain_se'], 3)} & "
+                             f"{pm(r['time_mean'], r['time_se'], 1)} & {pm(r['gap_mean'], r['gap_se'], 5)} & "
+                             f"{f2(r['solved'])}/{r['n_instances']} & {ratio} & {nojs} \\\\")
+        tex_table(out, "experiment_C_data_methods.tex", "", "", lines)
+        P = dict_rows(pp)
+        idx = {(r["class"], r["configuration"], r["against"], r["metric"]): r for r in P}
+        keys = []
+        for r in P:
+            if (r["class"], r["configuration"], r["against"]) not in keys:
+                keys.append((r["class"], r["configuration"], r["against"]))
+        lines = []
+        for cls, cfg, against in keys:
+            cells = [f"JointDW, {cfg}, data", METHOD_NAMES.get(against, against.replace(", original", ", original presentation")
+                                                             if against.endswith(", original") else against),
+                     CLASSES.get(cls, "All classes"), idx[(cls, cfg, against, "hit@1")]["n_instances"]]
+            for metric, d in (("hit@1", 2), ("gain", 3), ("time", 1)):
+                r = idx[(cls, cfg, against, metric)]
+                cells.append(pm(r["mean_difference"], r["se_difference"], d, r["asterisk"]))
+            lines.append(" & ".join(str(c) for c in cells) + " \\\\")
+        tex_table(out, "experiment_C_data_paired.tex", "", "", lines)
     return written
 
 

@@ -28,6 +28,8 @@ samples whose set has gain 0.
 Comparisons (paired over instances, cluster bootstrap over prompt groups, llmdw.scoring.cluster, 10,000 resamples, seed
 0; asterisk when the 95% interval excludes 0):
   JointDW (each model) minus the single-dual lookahead, the five-dual lookahead and GCG default: time difference (s);
+  JointDW (each model) minus the single-dual lookahead, the five-dual lookahead and GCG default, and the five-dual
+  lookahead minus GCG default: hit@1 and the gain of the first set (benchmark_paired_hit1.csv, benchmark_paired_gain.csv);
   each method against the true best set: the paired time ratio (t + 1 s) / (t_best + 1 s), reported as the geometric
   mean over instances (exp of the mean log ratio; interval and asterisk on the mean log ratio, standard error of the
   mean log ratio), and the paired gap difference (gap minus gap of the true best set).
@@ -77,10 +79,15 @@ def _row_or_error(root: Path, name: str, T) -> dict:
     return bnp.run_one((str(root), name, T))      # every row exists: run_one only reads
 
 
-def instance_values(root: Path, name: str, configs: list) -> dict:
+def instance_values(root: Path, name: str, configs: list, plan_files=("bnp_plan.json",)) -> dict:
+    """plan_files: the first gives the methods without samples and its configurations; each further file adds the
+    configurations of configs that the earlier files do not hold (bnp_plan_data.json: the data variant)."""
     d = root / "instances" / name
     o = json.loads((d / "oracle.json").read_text())
-    p = json.loads((d / "bnp_plan.json").read_text())
+    p = json.loads((d / plan_files[0]).read_text())
+    for extra in plan_files[1:]:
+        q = json.loads((d / extra).read_text())
+        p["methods"].update({c: q["methods"][c] for c in configs if c not in p["methods"] and c in q["methods"]})
     cl = json.loads((d / "classification.json").read_text())
     meta = json.loads((d / "meta.json").read_text())
     from llmdw.scoring import bounds
@@ -97,7 +104,8 @@ def instance_values(root: Path, name: str, configs: list) -> dict:
                                                          and r.get("status") != "failed"
                                                          and not r.get("bound_invalid")) else None
     ties = {bnp.set_key(T) for T in p["methods"]["true_best_ties"]}
-    runs = {r["set"]: r for r in (_row_or_error(root, name, T) for _, _, T in bnp.jobs_of(root, name))}
+    jobs = {(bnp.set_key(T) if T != "gcg_default" else T): T for pf in plan_files for _, _, T in bnp.jobs_of(root, name, pf)}
+    runs = {r["set"]: r for r in (_row_or_error(root, name, T) for T in jobs.values())}
 
     def bnp_of(key):
         r = runs.get(key)
@@ -179,7 +187,8 @@ def _ratio(a: dict, b: dict) -> dict:
 def tables(vals: dict, configs: list) -> dict:
     methods = list(SINGLE) + list(configs)
     pi = {n: {m: per_instance(v, m) for m in methods} for n, v in vals.items()}
-    out = {"zero_marginal": [], "methods": [], "paired_jointdw": [], "paired_true_best": []}
+    out = {"zero_marginal": [], "methods": [], "paired_jointdw": [], "paired_true_best": [], "paired_hit1": [],
+           "paired_gain": []}
     for cls in CLASSES + ("all",):
         names = sorted(n for n, v in vals.items() if cls == "all" or v["class"] == cls)
         if not names:
@@ -208,6 +217,14 @@ def tables(vals: dict, configs: list) -> dict:
                                               "failed_twice_instances": " ".join(
                                                   n for n in names if pi[n][c]["failed_twice"]
                                                   or pi[n][b]["failed_twice"])})
+        # paired differences of hit@1 and of the gain of the first set: JointDW against each baseline, and the
+        # five-dual lookahead against GCG's detector
+        pairs = [(c, b) for c in configs for b in ("lookahead (single dual)", "lookahead (five duals)", "GCG default")]
+        pairs.append(("lookahead (five duals)", "GCG default"))
+        for a, b in pairs:
+            for key, table in (("hit", "paired_hit1"), ("gain", "paired_gain")):
+                r = _paired({n: pi[n][a][key] for n in names}, {n: pi[n][b][key] for n in names})
+                out[table].append({"class": cls, "configuration": a, "against": b, **r})
         for m in methods[1:]:
             t = _ratio({n: pi[n][m]["time"] for n in names}, {n: pi[n]["true best set"]["time"] for n in names})
             g = _paired({n: pi[n][m]["gap"] for n in names}, {n: pi[n]["true best set"]["gap"] for n in names})
@@ -346,6 +363,8 @@ def main(argv=None) -> int:
     _write(out / "benchmark_methods.csv", tabs["methods"])
     _write(out / "benchmark_paired_jointdw.csv", tabs["paired_jointdw"])
     _write(out / "benchmark_paired_true_best.csv", tabs["paired_true_best"])
+    _write(out / "benchmark_paired_hit1.csv", tabs["paired_hit1"])
+    _write(out / "benchmark_paired_gain.csv", tabs["paired_gain"])
     sel = root / "selection.json"
     (out / "REPORT.md").write_text(report(vals, tabs, configs, [p for p in args.first_batch.split(",") if p],
                                           json.loads(sel.read_text()) if sel.exists() else None), encoding="utf-8")
