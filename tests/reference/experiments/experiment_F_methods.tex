@@ -1,0 +1,22 @@
+% Experiment F: per class and method. Columns: method; hit@1 against the bound-optimal set (not scored on the instances where every set within the budget has gain 0); hit@1 against the time-optimal set (the first of the planned sets within the budget by the rule of Experiment D), strict and within 10 percent; time ratio of the method's set to the time-optimal set and to GCG as shipped (geometric mean over instances $\pm$ the SE of the mean log ratio times the geometric mean; asterisk: the 95 percent interval of the mean log ratio excludes 0); false alarms (samples predicting a joint support where none lies within the budget); samples naming a set outside the budget (for the methods without samples: instances whose set is outside the budget). Mean $\pm$ standard error (two-stage bootstrap: prompt groups, then instances within them). Sources: results/experiment_F/methods.csv, methods_time.csv.
+\multicolumn{8}{@{}l}{\emph{Generalized assignment}} \\
+Bound-optimal set & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.01 $\pm$ 0.02 & -- & 0 \\
+Lookahead, HiGHS dual & 0.97 $\pm$ 0.03 & 0.97 $\pm$ 0.03 & 0.97 $\pm$ 0.03 & 1.01 $\pm$ 0.01 & 1.02 $\pm$ 0.03 & -- & 0 \\
+Lookahead, five duals & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.01 $\pm$ 0.02 & -- & 0 \\
+GCG's detector & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 0.99 $\pm$ 0.02 & 1.00 $\pm$ 0.00 & -- & 0 \\
+JointDW, GPT-6.1 Sol & 0.94 $\pm$ 0.05 & 0.94 $\pm$ 0.05 & 0.94 $\pm$ 0.05 & 1.00 $\pm$ 0.00 & 1.01 $\pm$ 0.02 & 0 & 0 \\
+JointDW, Claude Sonnet 5.5 & 0.75 $\pm$ 0.06 & 0.75 $\pm$ 0.06 & 0.75 $\pm$ 0.06 & 0.99 $\pm$ 0.01 & 1.00 $\pm$ 0.02 & 13 & 32 \\
+\multicolumn{8}{@{}l}{\emph{Bin packing}} \\
+Bound-optimal set & 1.00 $\pm$ 0.00 & 0.75 $\pm$ 0.18 & 0.75 $\pm$ 0.18 & 3.12 $\pm$ 2.67 & 1.36 $\pm$ 1.12 & -- & 0 \\
+Lookahead, HiGHS dual & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 86.16 $\pm$ 24.54$^{*}$ & 37.53 $\pm$ 12.13$^{*}$ & -- & 3 \\
+Lookahead, five duals & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 86.16 $\pm$ 24.54$^{*}$ & 37.53 $\pm$ 12.13$^{*}$ & -- & 15 \\
+GCG's detector & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 2.30 $\pm$ 0.77$^{*}$ & 1.00 $\pm$ 0.00 & -- & 0 \\
+JointDW, GPT-6.1 Sol & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 1.00 $\pm$ 0.00 & 0.44 $\pm$ 0.15$^{*}$ & 0 & 0 \\
+JointDW, Claude Sonnet 5.5 & 0.92 $\pm$ 0.09 & 0.77 $\pm$ 0.16 & 0.77 $\pm$ 0.16 & 2.80 $\pm$ 2.16 & 1.22 $\pm$ 0.90 & 0 & 11 \\
+\multicolumn{8}{@{}l}{\emph{All classes}} \\
+Bound-optimal set & 1.00 $\pm$ 0.00 & 0.95 $\pm$ 0.04 & 0.95 $\pm$ 0.04 & 1.27 $\pm$ 0.23 & 1.07 $\pm$ 0.17 & -- & 0 \\
+Lookahead, HiGHS dual & 0.81 $\pm$ 0.10 & 0.76 $\pm$ 0.10 & 0.76 $\pm$ 0.10 & 2.58 $\pm$ 1.16$^{*}$ & 2.18 $\pm$ 0.81$^{*}$ & -- & 3 \\
+Lookahead, five duals & 0.83 $\pm$ 0.10 & 0.79 $\pm$ 0.10 & 0.79 $\pm$ 0.10 & 2.56 $\pm$ 1.15$^{*}$ & 2.16 $\pm$ 0.81$^{*}$ & -- & 15 \\
+GCG's detector & 0.83 $\pm$ 0.10 & 0.79 $\pm$ 0.10 & 0.79 $\pm$ 0.10 & 1.18 $\pm$ 0.13$^{*}$ & 1.00 $\pm$ 0.00 & -- & 0 \\
+JointDW, GPT-6.1 Sol & 0.95 $\pm$ 0.04 & 0.96 $\pm$ 0.04 & 0.96 $\pm$ 0.04 & 1.00 $\pm$ 0.00 & 0.84 $\pm$ 0.09$^{*}$ & 0 & 0 \\
+JointDW, Claude Sonnet 5.5 & 0.78 $\pm$ 0.05 & 0.75 $\pm$ 0.05 & 0.75 $\pm$ 0.05 & 1.23 $\pm$ 0.20 & 1.04 $\pm$ 0.14 & 13 & 43 \\

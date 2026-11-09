@@ -4,7 +4,7 @@ evaluation may convexify at most s = 6 families (Figure 2 and Table 3 of the pap
 Columns of the output file (space separated):
   k            number of constraint families
   free_lb      C(k, w) / C(s, w): lower bound for search without a prediction (Theorem 1)
-  free_greedy  size of a greedy covering of the w-subsets by s-sets, an achievable worst case (k <= 20)
+  free_greedy  size of a greedy covering of the w-subsets by s-sets, an achievable worst case
   lb_e{1,2,3}  L_e of Theorem 2(b): lower bound when a predicted group of size w misses e members
   st_e{1,2,3}  queries in stages 0..e of the staged search of Theorem 2(a) built with greedy coverings,
                the worst case over hidden groups that miss e members
@@ -21,29 +21,29 @@ import numpy as np
 
 S, W = 6, 3
 K_MIN, K_MAX = 8, 24
-FREE_GREEDY_KMAX = 20
+FREE_GREEDY_KMAX = 24
 
 
 def greedy_cover_size(n: int, b: int, t: int) -> int:
-    """Size of a greedy covering of all t-subsets of an n-set by b-subsets (b <= n)."""
+    """Size of a greedy covering of all t-subsets of an n-set by b-subsets (b <= n): each step takes the block that
+    covers the most uncovered t-subsets, the first such block in itertools order on ties (np.argmax). Every block
+    stores the indices of its t-subsets (int32, shape (blocks, C(b, t))), so memory grows with C(n, b) C(b, t)."""
     if t == 0:
         return 1
     b = min(b, n)
     if t > b:
         raise ValueError("t > b")
-    tsets = list(itertools.combinations(range(n), t))
-    index = {c: i for i, c in enumerate(tsets)}
-    blocks = list(itertools.combinations(range(n), b))
-    cover = np.zeros((len(blocks), len(tsets)), dtype=np.uint8)
-    for r, block in enumerate(blocks):
-        for c in itertools.combinations(block, t):
-            cover[r, index[c]] = 1
-    uncovered = np.ones(len(tsets), dtype=np.int64)
+    index = {c: i for i, c in enumerate(itertools.combinations(range(n), t))}
+    nblocks, per = comb(n, b), comb(b, t)
+    idx = np.empty((nblocks, per), dtype=np.int32)
+    for r, block in enumerate(itertools.combinations(range(n), b)):
+        idx[r] = [index[c] for c in itertools.combinations(block, t)]
+    uncovered = np.ones(len(index), dtype=np.int32)
     count = 0
     while uncovered.any():
-        gains = cover @ uncovered
+        gains = uncovered[idx].sum(axis=1)
         r = int(np.argmax(gains))
-        uncovered[cover[r].astype(bool)] = 0
+        uncovered[idx[r]] = 0
         count += 1
     return count
 

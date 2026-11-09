@@ -135,7 +135,8 @@ def _paired_row(base: dict, a: str, b: str, A: dict, B: dict) -> dict:
     both = [n for n in sorted(A) if A[n] is not None and B.get(n) is not None]
     diffs = [A[n] - B[n] for n in both]
     lo, hi, se = results.boot_ci_se(list(zip(both, diffs)))
-    return {**base, "contrast": f"{a} minus {b}", "n_instances": len(both), "mean_a": results._mean(A[n] for n in both),
+    return {**base, "contrast": f"{a} minus {b}", "n_instances": len(both), "n_groups": cluster.n_groups(both),
+            "mean_a": results._mean(A[n] for n in both),
             "mean_b": results._mean(B[n] for n in both), "mean_difference": results._mean(diffs),
             "se_difference": se, "lo": lo, "hi": hi, "asterisk": "*" if lo is not None and (lo > 0 or hi < 0) else ""}
 
@@ -179,7 +180,7 @@ def rich_tables(work: Path, out: Path, configs) -> dict:
                     continue
                 vals = [v for v in d.values() if v is not None]
                 lo, hi, se = results.boot_stat_se(d, np.mean)
-                srch.append({"class": cls, "s": s, "method": m, "config": "", "n_instances": len(d),
+                srch.append({"class": cls, "s": s, "method": m, "config": "", "n_instances": len(d), "n_groups": cluster.n_groups(d),
                              "n_failures": sum(v is None for v in d.values()), "mean": results._mean(vals),
                              "mean_lo": lo, "mean_hi": hi, "mean_se": se})
     rows_i, rows_g = [], []
@@ -221,6 +222,7 @@ def rich_tables(work: Path, out: Path, configs) -> dict:
                 h = results.per_instance(scores, "joint_hit1", "original", names)
                 r_ = results.per_instance(scores, "joint_recall", "original", names)
                 pred.append({"class": cls, "config": cfg, "condition": "original", "n_instances": len(r_),
+                             "n_groups": cluster.n_groups(r_),
                              "hit1": results._mean(h.values()), **results._ci("hit1", h),
                              "recall": results._mean(r_.values()), **results._ci("recall", r_)})
                 for s in (2, 3):
@@ -236,7 +238,7 @@ def rich_tables(work: Path, out: Path, configs) -> dict:
                             d[n_] = sum(ok) / len(ok) if ok else None
                         vals[m] = d
                         lo, hi, se = results.boot_stat_se(d, np.mean)
-                        srch.append({"class": cls, "s": s, "method": m, "config": cfg, "n_instances": len(d),
+                        srch.append({"class": cls, "s": s, "method": m, "config": cfg, "n_instances": len(d), "n_groups": cluster.n_groups(d),
                                      "n_failures": sum(v is None for v in d.values()),
                                      "mean": results._mean(v for v in d.values() if v is not None),
                                      "mean_lo": lo, "mean_hi": hi, "mean_se": se})
@@ -282,6 +284,7 @@ def with_data_tables(work: Path, out: Path, insts: list, r_inst: dict, recs_by_w
             r_ = results.per_instance(sc_wd, "joint_recall", "original", names)
             cluster.set_groups({})
             pred.append({"class": cls, "config": cfg, "condition": "original", "n_instances": len(r_),
+                             "n_groups": cluster.n_groups(r_),
                          "hit1": results._mean(h.values()), **results._ci("hit1", h),
                          "recall": results._mean(r_.values()), **results._ci("recall", r_)})
             measures = {"hit1": (h, results.per_instance(sc_wo, "joint_hit1", "original", names)),
@@ -291,7 +294,7 @@ def with_data_tables(work: Path, out: Path, insts: list, r_inst: dict, recs_by_w
                 for m in ("jointdw", "interleaved"):
                     d = vals[m]
                     lo, hi, se = results.boot_stat_se(d, np.mean)
-                    srch.append({"class": cls, "s": s, "method": m, "config": cfg, "n_instances": len(d),
+                    srch.append({"class": cls, "s": s, "method": m, "config": cfg, "n_instances": len(d), "n_groups": cluster.n_groups(d),
                                  "n_failures": sum(v is None for v in d.values()),
                                  "mean": results._mean(v for v in d.values() if v is not None),
                                  "mean_lo": lo, "mean_hi": hi, "mean_se": se})
@@ -307,7 +310,7 @@ def with_data_tables(work: Path, out: Path, insts: list, r_inst: dict, recs_by_w
                 both = [n for n in sorted(A) if A[n] is not None and B.get(n) is not None]
                 diffs = [A[n] - B[n] for n in both]
                 lo, hi, se = results.boot_ci_se(list(zip(both, diffs)))
-                vs.append({"class": cls, "config": cfg, "measure": key, "n_instances": len(both),
+                vs.append({"class": cls, "config": cfg, "measure": key, "n_instances": len(both), "n_groups": cluster.n_groups(both),
                            "mean_with_data": results._mean(A[n] for n in both),
                            "mean_without_data": results._mean(B[n] for n in both),
                            "mean_difference": results._mean(diffs), "se_difference": se, "lo": lo, "hi": hi,

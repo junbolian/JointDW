@@ -1,0 +1,57 @@
+% Experiment D: paired differences. Columns: method minus baseline; instances; hit@1 strict; hit@1 within 10 percent; mean log ratio of the time statistics. Mean $\pm$ standard error, two-stage bootstrap over prompt groups and instances (instances for the coefficient presentation), asterisk: 95 percent interval excludes 0. Source: results/experiment_D/paired_time_truth.csv
+\multicolumn{5}{@{}l}{\emph{Lot sizing}} \\
+GPT-6.1 Sol minus lookahead (single dual) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.000 $\pm$ 0.000 \\
+GPT-6.1 Sol minus lookahead (five duals) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.000 $\pm$ 0.000 \\
+GPT-6.1 Sol minus GCG default & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.126 $\pm$ 0.046$^{*}$ \\
+Claude Sonnet 5.5 minus lookahead (single dual) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.000 $\pm$ 0.000 \\
+Claude Sonnet 5.5 minus lookahead (five duals) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.000 $\pm$ 0.000 \\
+Claude Sonnet 5.5 minus GCG default & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.126 $\pm$ 0.046$^{*}$ \\
+GPT-6.1 Sol, coefficients minus lookahead (single dual) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.000 $\pm$ 0.000 \\
+GPT-6.1 Sol, coefficients minus lookahead (five duals) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.000 $\pm$ 0.000 \\
+GPT-6.1 Sol, coefficients minus GCG default & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.126 $\pm$ 0.046$^{*}$ \\
+Claude Sonnet 5.5, coefficients minus lookahead (single dual) & 20 & 0.02 $\pm$ 0.02 & 0.02 $\pm$ 0.02 & $-$0.006 $\pm$ 0.077 \\
+Claude Sonnet 5.5, coefficients minus lookahead (five duals) & 20 & 0.02 $\pm$ 0.02 & 0.02 $\pm$ 0.02 & $-$0.006 $\pm$ 0.077 \\
+Claude Sonnet 5.5, coefficients minus GCG default & 20 & 0.02 $\pm$ 0.02 & 0.02 $\pm$ 0.02 & 0.120 $\pm$ 0.092 \\
+lookahead (five duals) minus GCG default & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 0.126 $\pm$ 0.046$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Network design}} \\
+GPT-6.1 Sol minus lookahead (single dual) & 20 & 0.02 $\pm$ 0.12 & 0.05 $\pm$ 0.14 & $-$0.903 $\pm$ 0.816 \\
+GPT-6.1 Sol minus lookahead (five duals) & 20 & $-$0.03 $\pm$ 0.11 & 0.00 $\pm$ 0.13 & $-$0.822 $\pm$ 0.830 \\
+GPT-6.1 Sol minus GCG default & 20 & 0.12 $\pm$ 0.06 & 0.25 $\pm$ 0.09$^{*}$ & $-$0.749 $\pm$ 0.341$^{*}$ \\
+Claude Sonnet 5.5 minus lookahead (single dual) & 20 & 0.07 $\pm$ 0.13 & 0.08 $\pm$ 0.18 & $-$0.986 $\pm$ 0.633 \\
+Claude Sonnet 5.5 minus lookahead (five duals) & 20 & 0.02 $\pm$ 0.12 & 0.03 $\pm$ 0.16 & $-$0.904 $\pm$ 0.588 \\
+Claude Sonnet 5.5 minus GCG default & 20 & 0.17 $\pm$ 0.09$^{*}$ & 0.28 $\pm$ 0.11$^{*}$ & $-$0.831 $\pm$ 0.345$^{*}$ \\
+GPT-6.1 Sol, coefficients minus lookahead (single dual) & 20 & $-$0.03 $\pm$ 0.07 & $-$0.07 $\pm$ 0.11 & 0.480 $\pm$ 0.455 \\
+GPT-6.1 Sol, coefficients minus lookahead (five duals) & 20 & $-$0.08 $\pm$ 0.08 & $-$0.12 $\pm$ 0.12 & 0.561 $\pm$ 0.561 \\
+GPT-6.1 Sol, coefficients minus GCG default & 20 & 0.07 $\pm$ 0.04 & 0.13 $\pm$ 0.06$^{*}$ & 0.634 $\pm$ 0.391 \\
+Claude Sonnet 5.5, coefficients minus lookahead (single dual) & 20 & $-$0.08 $\pm$ 0.06 & $-$0.10 $\pm$ 0.10 & 0.821 $\pm$ 0.376$^{*}$ \\
+Claude Sonnet 5.5, coefficients minus lookahead (five duals) & 20 & $-$0.13 $\pm$ 0.07 & $-$0.15 $\pm$ 0.11 & 0.903 $\pm$ 0.467$^{*}$ \\
+Claude Sonnet 5.5, coefficients minus GCG default & 20 & 0.02 $\pm$ 0.02 & 0.10 $\pm$ 0.05$^{*}$ & 0.976 $\pm$ 0.376$^{*}$ \\
+lookahead (five duals) minus GCG default & 20 & 0.15 $\pm$ 0.12 & 0.25 $\pm$ 0.16 & 0.073 $\pm$ 0.532 \\
+\multicolumn{5}{@{}l}{\emph{Facility location}} \\
+GPT-6.1 Sol minus lookahead (single dual) & 19 & 0.05 $\pm$ 0.07 & 0.16 $\pm$ 0.16 & $-$0.461 $\pm$ 0.561 \\
+GPT-6.1 Sol minus lookahead (five duals) & 19 & 0.00 $\pm$ 0.00 & 0.05 $\pm$ 0.07 & $-$0.020 $\pm$ 0.027 \\
+GPT-6.1 Sol minus GCG default & 19 & 0.05 $\pm$ 0.07 & 0.16 $\pm$ 0.16 & $-$1.149 $\pm$ 0.123$^{*}$ \\
+Claude Sonnet 5.5 minus lookahead (single dual) & 19 & 0.04 $\pm$ 0.05 & 0.12 $\pm$ 0.13 & $-$0.197 $\pm$ 0.533 \\
+Claude Sonnet 5.5 minus lookahead (five duals) & 19 & $-$0.02 $\pm$ 0.02 & 0.02 $\pm$ 0.07 & 0.244 $\pm$ 0.104$^{*}$ \\
+Claude Sonnet 5.5 minus GCG default & 19 & 0.04 $\pm$ 0.05 & 0.12 $\pm$ 0.13 & $-$0.885 $\pm$ 0.134$^{*}$ \\
+GPT-6.1 Sol, coefficients minus lookahead (single dual) & 19 & 0.05 $\pm$ 0.05 & 0.16 $\pm$ 0.08 & $-$0.463 $\pm$ 0.380$^{*}$ \\
+GPT-6.1 Sol, coefficients minus lookahead (five duals) & 19 & 0.00 $\pm$ 0.00 & 0.05 $\pm$ 0.05 & $-$0.022 $\pm$ 0.019$^{*}$ \\
+GPT-6.1 Sol, coefficients minus GCG default & 19 & 0.05 $\pm$ 0.05 & 0.16 $\pm$ 0.08 & $-$1.152 $\pm$ 0.119$^{*}$ \\
+Claude Sonnet 5.5, coefficients minus lookahead (single dual) & 19 & 0.07 $\pm$ 0.04 & 0.12 $\pm$ 0.05$^{*}$ & $-$0.060 $\pm$ 0.389 \\
+Claude Sonnet 5.5, coefficients minus lookahead (five duals) & 19 & 0.02 $\pm$ 0.03 & 0.02 $\pm$ 0.06 & 0.381 $\pm$ 0.108$^{*}$ \\
+Claude Sonnet 5.5, coefficients minus GCG default & 19 & 0.07 $\pm$ 0.04 & 0.12 $\pm$ 0.05$^{*}$ & $-$0.749 $\pm$ 0.134$^{*}$ \\
+lookahead (five duals) minus GCG default & 19 & 0.05 $\pm$ 0.07 & 0.11 $\pm$ 0.12 & $-$1.129 $\pm$ 0.121$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{All classes}} \\
+GPT-6.1 Sol minus lookahead (single dual) & 59 & 0.02 $\pm$ 0.05 & 0.07 $\pm$ 0.08 & $-$0.455 $\pm$ 0.393 \\
+GPT-6.1 Sol minus lookahead (five duals) & 59 & $-$0.01 $\pm$ 0.04 & 0.02 $\pm$ 0.05 & $-$0.285 $\pm$ 0.338 \\
+GPT-6.1 Sol minus GCG default & 59 & 0.06 $\pm$ 0.04 & 0.14 $\pm$ 0.08$^{*}$ & $-$0.581 $\pm$ 0.287$^{*}$ \\
+Claude Sonnet 5.5 minus lookahead (single dual) & 59 & 0.03 $\pm$ 0.05 & 0.07 $\pm$ 0.08 & $-$0.397 $\pm$ 0.357 \\
+Claude Sonnet 5.5 minus lookahead (five duals) & 59 & 0.00 $\pm$ 0.04 & 0.02 $\pm$ 0.06 & $-$0.228 $\pm$ 0.294 \\
+Claude Sonnet 5.5 minus GCG default & 59 & 0.07 $\pm$ 0.05$^{*}$ & 0.14 $\pm$ 0.08$^{*}$ & $-$0.524 $\pm$ 0.271$^{*}$ \\
+GPT-6.1 Sol, coefficients minus lookahead (single dual) & 59 & 0.01 $\pm$ 0.03 & 0.03 $\pm$ 0.05 & 0.013 $\pm$ 0.203 \\
+GPT-6.1 Sol, coefficients minus lookahead (five duals) & 59 & $-$0.03 $\pm$ 0.03 & $-$0.02 $\pm$ 0.04 & 0.183 $\pm$ 0.194 \\
+GPT-6.1 Sol, coefficients minus GCG default & 59 & 0.04 $\pm$ 0.02$^{*}$ & 0.10 $\pm$ 0.03$^{*}$ & $-$0.113 $\pm$ 0.170 \\
+Claude Sonnet 5.5, coefficients minus lookahead (single dual) & 59 & 0.00 $\pm$ 0.03 & 0.01 $\pm$ 0.04 & 0.257 $\pm$ 0.189 \\
+Claude Sonnet 5.5, coefficients minus lookahead (five duals) & 59 & $-$0.03 $\pm$ 0.03 & $-$0.04 $\pm$ 0.04 & 0.427 $\pm$ 0.173$^{*}$ \\
+Claude Sonnet 5.5, coefficients minus GCG default & 59 & 0.03 $\pm$ 0.02$^{*}$ & 0.08 $\pm$ 0.03$^{*}$ & 0.130 $\pm$ 0.167 \\
+lookahead (five duals) minus GCG default & 59 & 0.07 $\pm$ 0.06 & 0.12 $\pm$ 0.08 & $-$0.296 $\pm$ 0.304 \\

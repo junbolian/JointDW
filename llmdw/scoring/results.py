@@ -92,7 +92,8 @@ RESAMPLES = BOOTSTRAP_RESAMPLES
 def boot_stat_se(values, stat=np.mean, resamples: int = RESAMPLES, seed: int = BOOTSTRAP_SEED):
     """(lo, hi, se): the 95% percentile bootstrap interval of stat(values) and the bootstrap standard error, the standard
     deviation (ddof = 1) of the same replicates. values: {instance: value} or (instance, value) pairs; prompt groups
-    are resampled (llmdw.scoring.cluster), which is the instance bootstrap when every group is one instance."""
+    and then the instances within each drawn group are resampled (llmdw.scoring.cluster), which is the instance
+    bootstrap when every group is one instance."""
     return cluster.boot(values, stat, resamples, seed)
 
 
@@ -101,7 +102,8 @@ def boot_ci_se(values, resamples: int = RESAMPLES, seed: int = BOOTSTRAP_SEED):
 
 
 def boot_ci(values, resamples: int = RESAMPLES, seed: int = BOOTSTRAP_SEED):
-    """95% percentile bootstrap interval of the mean (values with instance names; prompt groups resampled)."""
+    """95% percentile bootstrap interval of the mean (values with instance names; two-stage bootstrap over prompt
+    groups and their instances)."""
     lo, hi, _ = cluster.boot(values, np.mean, resamples, seed)
     return lo, hi
 
@@ -178,7 +180,7 @@ def phase_prompts(work: Path, phase: str, instances: dict | None = None) -> dict
 
 
 def use_prompt_groups(work: Path, phase: str, instances: dict | None = None) -> list:
-    """The prompt groups of one phase, registered for the cluster bootstrap (llmdw.scoring.cluster), as the rows of
+    """The prompt groups of one phase, registered for the bootstrap (llmdw.scoring.cluster), as the rows of
     prompt_groups.csv (phase, instance, group). They are read from <work>/prompt_groups.csv when that file exists
     (the released data, which do not include the MIPLIB-NL descriptions), and otherwise computed from the prompts."""
     table = work / "prompt_groups.csv"
@@ -291,11 +293,12 @@ def prediction_tables(phase, config, rows, instances):
             h = per_instance(rows, "joint_hit1", cond, names)
             r = per_instance(rows, "joint_recall", cond, names)
             pred.append({"phase": phase, "config": config, "condition": cond, "class": cls, "n_instances": len(r),
+                         "n_groups": cluster.n_groups(r),
                          "hit1": _mean(h.values()), **_ci("hit1", h), "recall": _mean(r.values()), **_ci("recall", r)})
         if phase == "templates":
             gap = {n for n, i in instances.items() if i["class"] == "gap"}
             fa = per_instance(rows, "joint_false", cond, gap)
-            alarm.append({"config": config, "condition": cond, "n_instances": len(fa), "false_alarm": _mean(fa.values()),
+            alarm.append({"config": config, "condition": cond, "n_instances": len(fa), "n_groups": cluster.n_groups(fa), "false_alarm": _mean(fa.values()),
                           **_ci("false_alarm", fa)})
             nd = {n for n, i in instances.items() if i["class"] == "needle"}
             hit = per_instance(rows, "joint_hit1", cond, nd)
@@ -306,7 +309,7 @@ def prediction_tables(phase, config, rows, instances):
                                "chance": lv[n]["chance"],
                                "strict_chance": lv[n]["strict_chance"], "matching_sets": lv[n]["matching_sets"]})
             lo, hi, se = boot_ci_se(hit)
-            needle.append({"config": config, "condition": cond, "instance": "all", "n_instances": len(hit), "k": None, "w": None,
+            needle.append({"config": config, "condition": cond, "instance": "all", "n_instances": len(hit), "n_groups": cluster.n_groups(hit), "k": None, "w": None,
                            "hit_rate": _mean(hit.values()), "hit_lo": lo, "hit_hi": hi, "hit_se": se,
                            "chance": _mean(lv[n]["chance"] for n in hit),
                            "strict_chance": _mean(lv[n]["strict_chance"] for n in hit), "matching_sets": None})
@@ -332,7 +335,7 @@ def lookahead_detection(phase, instances):
                 tj = instances[n]["truth"]["joint"]
                 det[n] = sum(1 for W in tj if W in g) / len(tj)
         lo, hi, se = boot_ci_se(det)
-        out.append({"phase": phase, "class": cls, "n_instances": len(det), "n_without_lookahead": len(names) - len(det),
+        out.append({"phase": phase, "class": cls, "n_instances": len(det), "n_groups": cluster.n_groups(det), "n_without_lookahead": len(names) - len(det),
                     "detection_rate": _mean(det.values()), "detection_lo": lo, "detection_hi": hi,
                     "detection_se": se})
     return out
@@ -349,6 +352,7 @@ def paired_tables(phase, config, rows, instances):
         diffs = [v for _, v in pairs]
         lo, hi, se = boot_ci_se(pairs)
         out.append({"phase": phase, "config": config, "contrast": f"{a} minus {b}", "n_instances": len(diffs),
+                    "n_groups": cluster.n_groups(pairs),
                     "mean_difference": _mean(diffs), "lo": lo, "hi": hi, "se_difference": se})
     return out
 
@@ -366,7 +370,7 @@ def paired_configs(phase, a, b, rows_a, rows_b, instances):
             diffs = [ma[i] - mb[i] for i in both]
             lo, hi, se = boot_ci_se(list(zip(both, diffs)))
             out.append({"phase": phase, "contrast": f"{a} minus {b}", "condition": cond, "measure": key,
-                        "n_instances": len(both), "mean_a": _mean(ma[i] for i in both),
+                        "n_instances": len(both), "n_groups": cluster.n_groups(both), "mean_a": _mean(ma[i] for i in both),
                         "mean_b": _mean(mb[i] for i in both), "mean_difference": _mean(diffs), "lo": lo, "hi": hi,
                         "se_difference": se})
     return out
@@ -391,6 +395,7 @@ def baseline_search(phase, instances):
     for method, d in per.items():
         vals = [v for v in d.values() if v is not None]
         out.append({"phase": phase, "method": method, "config": "", "condition": "", "n_instances": len(d),
+                    "n_groups": cluster.n_groups(d),
                     "n_failures": sum(1 for v in d.values() if v is None), "mean": _mean(vals), "median": _median(vals)})
     return out, per
 
@@ -419,7 +424,7 @@ def jointdw_search(phase, config, rows, instances):
                                    "evals_covering": r.get("evals_covering")})
             means = [sum(v) / len(v) for v in acc.values()]
             dest.append({"phase": phase, "method": method, "config": config, "condition": cond,
-                         "n_instances": len(acc), "n_failures": fails, "mean": _mean(means), "median": _median(means)})
+                         "n_instances": len(acc), "n_groups": cluster.n_groups(acc), "n_failures": fails, "mean": _mean(means), "median": _median(means)})
     return out, alt, points
 
 
@@ -759,7 +764,7 @@ def ranked_and_narrow(phase, recs_by, instances, limits=SIZE_LIMITS, conditions=
         both = [n for n in A if A[n] is not None and B.get(n) is not None]
         diffs = [A[n] - B[n] for n in both]
         lo, hi, se = boot_ci_se(list(zip(both, diffs)))
-        out.append({**base, "contrast": f"{a} minus {b}", "n_instances": len(both),
+        out.append({**base, "contrast": f"{a} minus {b}", "n_instances": len(both), "n_groups": cluster.n_groups(both),
                     "mean_a": _mean(A[n] for n in both), "mean_b": _mean(B[n] for n in both),
                     "mean_difference": _mean(diffs), "lo": lo, "hi": hi, "se_difference": se,
                     "a_better": sum(1 for x in diffs if x < 0), "b_better": sum(1 for x in diffs if x > 0)})
@@ -825,6 +830,7 @@ def ranked_and_narrow(phase, recs_by, instances, limits=SIZE_LIMITS, conditions=
                 base = {"phase": phase, "limit": limit, "config": cfg, "condition": cond}
                 for lname, label in (("cand", "L_cand"), ("vote", "L_vote (one list per cell)")):
                     row = {**base, "list": label, "n_instances": len(ev[f"ranked_{lname}"]),
+                           "n_groups": cluster.n_groups(ev[f"ranked_{lname}"]),
                            "mean_list_length": _mean(length[lname])}
                     for m in (1, 3, 5):
                         row.update(stat_cols(f"coverage_at_{m}", cov[(lname, m)]))
@@ -837,7 +843,7 @@ def ranked_and_narrow(phase, recs_by, instances, limits=SIZE_LIMITS, conditions=
                         for b in ("lookahead", "covering"):
                             pair(rk_pair, {**base, "list": label}, ev.get(a, {}), ev.get(b, {}), lab[a], b)
                 for cname, label in (("cand", "C_cand"), ("sup", "C_sup")):
-                    row = {**base, "C": label, "n_instances": len(csize[cname]),
+                    row = {**base, "C": label, "n_instances": len(csize[cname]), "n_groups": cluster.n_groups(csize[cname]),
                            "mean_C_size_over_k": _mean(csize[cname].values()),
                            **stat_cols("share_C_contains_best", cin[cname])}
                     lab = {f"narrow_{cname}": "narrow", f"narrow_{cname}+lookahead": "narrow+lookahead",
@@ -949,7 +955,7 @@ def ranked_prompt_tables(work: Path, configs: list, phase_inst: dict, orig_recs:
                     fhit[n] = len(hits) / len(rk) if rk else None
                     csize[n], cin[n] = _mean(ps), _mean(pi)
                 base = {"phase": phase, "limit": limit, "config": cfg}
-                row = {**base, "n_instances": len(ev["ranked"]), "mean_list_length": _mean(length),
+                row = {**base, "n_instances": len(ev["ranked"]), "n_groups": cluster.n_groups(ev["ranked"]), "mean_list_length": _mean(length),
                        "mean_rank_first_best": _mean(v for v in frank.values() if v is not None),
                        "share_with_best_in_list": _mean(v for v in fhit.values() if v is not None),
                        "mean_C_rel_size_over_k": _mean(csize.values()),
@@ -976,6 +982,7 @@ def ranked_prompt_tables(work: Path, configs: list, phase_inst: dict, orig_recs:
                     paired.append({**base, "contrast": f"{a} minus {b}",
                                    "primary": a == "ranked+lookahead" and b == "lookahead" and phase in ("miplib", RICH_PHASE)
                                    and limit in ("2", "3"), "n_instances": len(both),
+                                   "n_groups": cluster.n_groups(both),
                                    "mean_a": _mean(A[n] for n in both), "mean_b": _mean(B[n] for n in both),
                                    "mean_difference": _mean(diffs), "lo": lo, "hi": hi, "se_difference": se,
                                    "a_better": sum(1 for x in diffs if x < 0), "b_better": sum(1 for x in diffs if x > 0)})
@@ -1007,6 +1014,7 @@ def lookahead_like_models(phase, recs_by, instances, rows_by):
         mh = per_instance(rows_by[cfg], "joint_hit1", "original", set(names))
         mr = per_instance(rows_by[cfg], "joint_recall", "original", set(names))
         out.append({"phase": phase, "config": cfg, "m_mean": m_mean, "m": m, "n_instances": len(names),
+                    "n_groups": cluster.n_groups(names),
                     "lookahead_hit1": _mean(hit.values()), **_ci("lookahead_hit1", hit),
                     "lookahead_recall_at_m": _mean(rec.values()), **_ci("lookahead_recall_at_m", rec),
                     "model_hit1": _mean(mh.values()), "model_recall": _mean(mr.values())})
@@ -1014,7 +1022,8 @@ def lookahead_like_models(phase, recs_by, instances, rows_by):
 
 
 def boot_stat(values, stat, resamples: int = RESAMPLES, seed: int = BOOTSTRAP_SEED):
-    """95% percentile bootstrap interval of stat (values with instance names; prompt groups resampled)."""
+    """95% percentile bootstrap interval of stat (values with instance names; two-stage bootstrap over prompt groups
+    and their instances)."""
     lo, hi, _ = cluster.boot(values, stat, resamples, seed)
     return lo, hi
 
@@ -1103,7 +1112,8 @@ def search_by_size(phase, recs_by, instances):
             mlo, mhi, mse = boot_stat_se(d, np.mean)
             dlo, dhi, dse = boot_stat_se(d, np.median)
             rows.append({"phase": phase, "limit": limit, "method": method, "config": cfg, "condition": cond,
-                         "n_instances": len(d), "n_failures": sum(1 for v in d.values() if v is None),
+                         "n_instances": len(d), "n_groups": cluster.n_groups(d),
+                         "n_failures": sum(1 for v in d.values() if v is None),
                          "mean": _mean(vals), "mean_lo": mlo, "mean_hi": mhi, "mean_se": mse,
                          "median": _median(vals), "median_lo": dlo, "median_hi": dhi, "median_se": dse})
     summary = []
@@ -1112,6 +1122,7 @@ def search_by_size(phase, recs_by, instances):
             xs = [r for r in inter if r["limit"] == limit and r["config"] == cfg]
             if xs:
                 summary.append({"phase": phase, "limit": limit, "config": cfg, "n_instances": len(xs),
+                                "n_groups": cluster.n_groups([r["instance"] for r in xs]),
                                 "interleaved_mean": _mean(r["interleaved"] for r in xs),
                                 "model_mean": _mean(r["model"] for r in xs),
                                 "lookahead_mean": _mean(r["lookahead"] for r in xs),
@@ -1158,7 +1169,7 @@ def complementarity(phase, rows_by, instances, kinds):
             c[(hits[n] >= 2, True)] += la_hit[n]
             c[(hits[n] >= 2, False)] += 1 - la_hit[n]
         cnt = (lambda x: f"{x:.1f}") if fractional else (lambda x: int(round(x)))
-        table.append({"phase": phase, "config": cfg, "n_instances": len(names), "both": cnt(c[(True, True)]),
+        table.append({"phase": phase, "config": cfg, "n_instances": len(names), "n_groups": cluster.n_groups(names), "both": cnt(c[(True, True)]),
                       "model_only": cnt(c[(True, False)]), "lookahead_only": cnt(c[(False, True)]),
                       "neither": cnt(c[(False, False)])})
     for n in names:
@@ -1199,7 +1210,7 @@ def by_group_kind(phase, recs_by, rows_by, instances, kinds):
                 la_rec = [_mean(float(W in top) for top in lookahead_tops(n, instances[n]["truth"], m)) for n, W in sup]
                 la_hit = [lookahead_hit1(n, instances[n]["truth"]) for n in inst]
                 out.append({"phase": phase, "dimension": dim, "kind": value, "config": cfg, "n_supports": len(sup),
-                            "n_instances": len(inst), "model_recall": _mean(rec_vals), **_ci_list("model_recall", rec_pairs),
+                            "n_instances": len(inst), "n_groups": cluster.n_groups(inst), "model_recall": _mean(rec_vals), **_ci_list("model_recall", rec_pairs),
                             "model_hit1": _mean(h.values()), "lookahead_recall_at_m": _mean(la_rec), "m": m,
                             "lookahead_hit1": _mean(la_hit)})
     return out
@@ -1259,6 +1270,13 @@ def greedy_hit(tab, goal):
         cur = nxt
 
 
+def oracle_seconds(s: dict, limit: float = EVAL_LIMIT_S) -> float:
+    """The time of one evaluation record: wall_seconds, else solving_time, a missing value at the limit, capped at the
+    limit."""
+    t = s.get("wall_seconds") if s.get("wall_seconds") is not None else s.get("solving_time")
+    return min(limit, t if t is not None else limit)
+
+
 def oracle_times(work: Path, name: str) -> dict:
     """{frozenset of convexified families: seconds} of the evaluations without linking variables."""
     o = json.loads((work / "work/oracle" / name / "oracle.json").read_text(encoding="utf-8"))
@@ -1267,8 +1285,7 @@ def oracle_times(work: Path, name: str) -> dict:
     for s in o.get("subsets") or []:
         if s.get("linking_var_families"):
             continue
-        t = s.get("wall_seconds") if s.get("wall_seconds") is not None else s.get("solving_time")
-        out[frozenset(fams - set(s.get("master_families") or []))] = min(EVAL_LIMIT_S, t if t is not None else EVAL_LIMIT_S)
+        out[frozenset(fams - set(s.get("master_families") or []))] = oracle_seconds(s)
     return out
 
 
@@ -1355,7 +1372,7 @@ def theorem2(phase, recs_by, instances, work: Path):
                 mlo, mhi, mse = boot_stat_se(d, np.mean)
                 dlo, dhi, dse = boot_stat_se(d, np.median)
                 row = {"phase": phase, "limit": limit, "target": goal_kind, "method": method, "anchor": aname,
-                       "config": cfg, "condition": cond, "n_instances": len(d),
+                       "config": cfg, "condition": cond, "n_instances": len(d), "n_groups": cluster.n_groups(d),
                        "n_failures": sum(1 for v in d.values() if v is None), "mean": _mean(vals), "mean_lo": mlo,
                        "mean_hi": mhi, "mean_se": mse, "median": _median(vals), "median_lo": dlo, "median_hi": dhi,
                        "median_se": dse}
@@ -1417,7 +1434,7 @@ def paired_search(phase, recs_by, instances, work: Path):
                         lo, hi, se = boot_ci_se(list(zip(both, diffs)))
                         out.append({"phase": phase, "limit": limit, "config": cfg, "unit": unit,
                                     "contrast": f"{a} minus {b}", "n_instances": len(both),
-                                    "mean_a": _mean(A[n] for n in both), "mean_b": _mean(B[n] for n in both),
+                                    "n_groups": cluster.n_groups(both), "mean_a": _mean(A[n] for n in both), "mean_b": _mean(B[n] for n in both),
                                     "mean_difference": _mean(diffs), "lo": lo, "hi": hi, "se_difference": se,
                                     "a_better": sum(1 for d in diffs if d < 0), "b_better": sum(1 for d in diffs if d > 0)})
     return out
@@ -1502,7 +1519,8 @@ def shortlist_search(phase, recs_by, instances, limits=SIZE_LIMITS, conditions=C
                     lo, hi, se = boot_stat_se(d, np.mean)
                     C = m.split("+")[0]
                     rows.append({"phase": phase, "limit": limit, "config": cfg, "condition": cond, "method": m,
-                                 "n_instances": len(d), "n_failures": sum(1 for v in d.values() if v is None),
+                                 "n_instances": len(d), "n_groups": cluster.n_groups(d),
+                                 "n_failures": sum(1 for v in d.values() if v is None),
                                  "mean_size": _mean(size[C]) if C in SHORTLISTS else None,
                                  "best_inside_share": _mean(map(float, inside[C])) if C in SHORTLISTS else None,
                                  "samples": len(inside[C]) if C in SHORTLISTS else None,
@@ -1516,6 +1534,7 @@ def shortlist_search(phase, recs_by, instances, limits=SIZE_LIMITS, conditions=C
                         lo, hi, se = boot_ci_se(list(zip(both, diffs)))
                         paired.append({"phase": phase, "limit": limit, "config": cfg, "condition": cond,
                                        "contrast": f"{m} minus {b}", "n_instances": len(both),
+                                       "n_groups": cluster.n_groups(both),
                                        "mean_a": _mean(A[n] for n in both), "mean_b": _mean(B[n] for n in both),
                                        "mean_difference": _mean(diffs), "lo": lo, "hi": hi, "se_difference": se,
                                        "a_better": sum(1 for x in diffs if x < 0),

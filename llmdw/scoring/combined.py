@@ -26,7 +26,7 @@ source of the cell: the single-source order with the lowest mean search cost ove
 first: JointDW staged order and five-dual lookahead order; three-source: these and the structural learned order; stacked:
 JointDW staged order, five-dual lookahead order and the structural+lookahead learned order). The best single source is
 chosen per cell after the fact, so the comparison against it favors the single source. Values are means over the family
-orders of llmdw.search.relabel and over the samples; paired differences with the cluster bootstrap. An instance whose
+orders of llmdw.search.relabel and over the samples; paired differences with the two-stage bootstrap. An instance whose
 order reaches no target in some family order counts as a failure (n_failed) and is left out of that mean.
 
 Usage

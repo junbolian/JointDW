@@ -1,0 +1,33 @@
+% Experiment D: each method's first set against the time-optimal set. Columns: method; instances; hit@1 strict; hit@1 within 10 percent; time of the first set relative to the time-optimal set (geometric mean of the ratios of time statistics; standard error: SE of the mean log ratio times the ratio). Mean $\pm$ standard error, two-stage bootstrap over prompt groups and instances (instances for the coefficient presentation), asterisk: 95 percent interval excludes 0 (ratio: excludes 1). Source: results/experiment_D/methods_time.csv
+\multicolumn{5}{@{}l}{\emph{Lot sizing}} \\
+lookahead (single dual) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 53.107 $\pm$ 11.976$^{*}$ \\
+lookahead (five duals) & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 53.107 $\pm$ 11.976$^{*}$ \\
+GCG default & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 46.828 $\pm$ 9.903$^{*}$ \\
+GPT-6.1 Sol & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 53.107 $\pm$ 11.976$^{*}$ \\
+Claude Sonnet 5.5 & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 53.107 $\pm$ 11.976$^{*}$ \\
+GPT-6.1 Sol, coefficients & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 53.107 $\pm$ 11.976$^{*}$ \\
+Claude Sonnet 5.5, coefficients & 20 & 0.02 $\pm$ 0.02 & 0.02 $\pm$ 0.02 & 52.791 $\pm$ 12.838$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Network design}} \\
+lookahead (single dual) & 20 & 0.10 $\pm$ 0.12 & 0.20 $\pm$ 0.16 & 5.816 $\pm$ 3.982$^{*}$ \\
+lookahead (five duals) & 20 & 0.15 $\pm$ 0.12 & 0.25 $\pm$ 0.16 & 5.362 $\pm$ 3.670$^{*}$ \\
+GCG default & 20 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 4.985 $\pm$ 1.130$^{*}$ \\
+GPT-6.1 Sol & 20 & 0.12 $\pm$ 0.06 & 0.25 $\pm$ 0.09 & 2.357 $\pm$ 0.633$^{*}$ \\
+Claude Sonnet 5.5 & 20 & 0.17 $\pm$ 0.09 & 0.28 $\pm$ 0.11 & 2.171 $\pm$ 0.723$^{*}$ \\
+GPT-6.1 Sol, coefficients & 20 & 0.07 $\pm$ 0.04 & 0.13 $\pm$ 0.06 & 9.397 $\pm$ 4.601$^{*}$ \\
+Claude Sonnet 5.5, coefficients & 20 & 0.02 $\pm$ 0.02 & 0.10 $\pm$ 0.05 & 13.224 $\pm$ 6.472$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Facility location}} \\
+lookahead (single dual) & 19 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 2.614 $\pm$ 1.274$^{*}$ \\
+lookahead (five duals) & 19 & 0.05 $\pm$ 0.07 & 0.11 $\pm$ 0.12 & 1.682 $\pm$ 0.301$^{*}$ \\
+GCG default & 19 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 5.205 $\pm$ 1.022$^{*}$ \\
+GPT-6.1 Sol & 19 & 0.05 $\pm$ 0.07 & 0.16 $\pm$ 0.16 & 1.649 $\pm$ 0.314$^{*}$ \\
+Claude Sonnet 5.5 & 19 & 0.04 $\pm$ 0.05 & 0.12 $\pm$ 0.13 & 2.147 $\pm$ 0.536$^{*}$ \\
+GPT-6.1 Sol, coefficients & 19 & 0.05 $\pm$ 0.05 & 0.16 $\pm$ 0.08 & 1.645 $\pm$ 0.138$^{*}$ \\
+Claude Sonnet 5.5, coefficients & 19 & 0.07 $\pm$ 0.04 & 0.12 $\pm$ 0.05 & 2.462 $\pm$ 0.312$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{All classes}} \\
+lookahead (single dual) & 59 & 0.03 $\pm$ 0.04 & 0.07 $\pm$ 0.06 & 9.515 $\pm$ 6.593$^{*}$ \\
+lookahead (five duals) & 59 & 0.07 $\pm$ 0.06 & 0.12 $\pm$ 0.08 & 8.031 $\pm$ 5.919$^{*}$ \\
+GCG default & 59 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 10.801 $\pm$ 5.762$^{*}$ \\
+GPT-6.1 Sol & 59 & 0.06 $\pm$ 0.04 & 0.14 $\pm$ 0.08 & 6.039 $\pm$ 4.722$^{*}$ \\
+Claude Sonnet 5.5 & 59 & 0.07 $\pm$ 0.05 & 0.14 $\pm$ 0.08 & 6.394 $\pm$ 4.932$^{*}$ \\
+GPT-6.1 Sol, coefficients & 59 & 0.04 $\pm$ 0.02 & 0.10 $\pm$ 0.03 & 9.644 $\pm$ 2.494$^{*}$ \\
+Claude Sonnet 5.5, coefficients & 59 & 0.03 $\pm$ 0.02 & 0.08 $\pm$ 0.03 & 12.304 $\pm$ 3.054$^{*}$ \\

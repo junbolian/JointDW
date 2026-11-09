@@ -361,9 +361,15 @@ def curves(inst: Instance, budget=BUDGET) -> dict:
     return out
 
 
+def n_groups(values) -> int:
+    """Prompt groups among the instances of values (llmdw.scoring.cluster)."""
+    from llmdw.scoring import cluster
+    return cluster.n_groups(values)
+
+
 def boot(values, stat=np.mean, n=BOOTSTRAP_RESAMPLES, seed=BOOTSTRAP_SEED):
     """(lo, hi, se): 95% percentile bootstrap interval and the standard deviation (ddof = 1) of the same replicates;
-    values with instance names, prompt groups resampled (llmdw.scoring.cluster)."""
+    values with instance names, prompt groups and their instances resampled (llmdw.scoring.cluster)."""
     from llmdw.scoring import cluster
     return cluster.boot(values, stat, n, seed)
 
@@ -397,12 +403,13 @@ def analyze(names: list, out: Path, work: Path, budget=BUDGET) -> dict:
             vals = [d[n][b] for n in d]
             lo, hi, se = boot([(n, d[n][b]) for n in d])
             curve_rows.append({"method": kind, "config": cfg, "b": b + 1, "n_instances": len(d),
-                               "mean_share": float(np.mean(vals)), "lo": lo, "hi": hi, "se": se})
+                               "n_groups": n_groups(d), "mean_share": float(np.mean(vals)), "lo": lo, "hi": hi, "se": se})
         area = [float(np.mean(d[n])) for n in d]
         reach = [next((b + 1 for b in range(budget) if d[n][b] >= 0.95 - 1e-12), None) for n in d]
         rv = [r if r is not None else budget for r in reach]
         alo, ahi, ase = boot(list(zip(list(d), area)))
-        summary.append({"method": kind, "config": cfg, "n_instances": len(d), "area": float(np.mean(area)),
+        summary.append({"method": kind, "config": cfg, "n_instances": len(d), "n_groups": n_groups(d),
+                        "area": float(np.mean(area)),
                         "area_lo": alo, "area_hi": ahi, "area_se": ase, "evals_to_95_mean": float(np.mean(rv)),
                         "evals_to_95_median": float(np.median(rv)), "censored_at_budget": sum(r is None for r in reach)})
     out.mkdir(parents=True, exist_ok=True)

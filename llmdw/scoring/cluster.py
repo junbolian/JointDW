@@ -1,4 +1,4 @@
-"""Prompt groups and the cluster bootstrap over them.
+"""Prompt groups and the two-stage bootstrap over them.
 
 Paper: Section 6 (measures): the standard errors and intervals of every table.
 
@@ -7,11 +7,13 @@ hence the same request for every configuration and sample index, and the same ca
 presentations; an instance without such a partner is its own group. Instances of one group may share a cached
 answer, so they are not independent observations.
 
-Cluster bootstrap: every bootstrap over instances resamples prompt groups instead: each replicate draws as many groups
-as there are among the instances of the row, with replacement, and keeps every value of every drawn group (rows for
-one class contain only that class's instances, so they resample the groups within the class). The random draws use
-numpy default_rng(seed); when every group of a row is a single value, the draws and the replicates are exactly those
-of the instance bootstrap. Point estimates are not computed here.
+Two-stage bootstrap: every bootstrap over instances resamples in two stages. Stage 1 draws as many prompt groups as
+there are among the instances of the row, with replacement; stage 2 draws, within each drawn group, as many of its
+instances as it has, with replacement, and each drawn instance contributes all its values (rows for one class contain
+only that class's instances, so they resample the groups within the class). The random draws use numpy
+default_rng(seed). When every prompt group of a row has one instance, stage 2 is the identity and the replicates are
+exactly those of the earlier one-stage bootstrap over groups (and of the instance bootstrap when every instance has
+one value). Point estimates are not computed here.
 
 Values are passed with their instance names: a dict {instance: value} or a list of (instance, value) pairs; None
 values are dropped, and several values may share an instance (they then always stay together).
@@ -71,17 +73,48 @@ def _labelled(values):
     else:
         items = list(values)
         if items and not (isinstance(items[0], tuple) and len(items[0]) == 2):
-            raise TypeError("the cluster bootstrap needs instance names: pass {instance: value} or (instance, value) pairs")
+            raise TypeError("the bootstrap needs instance names: pass {instance: value} or (instance, value) pairs")
     return [(n, v) for n, v in items if v is not None]
 
 
-def replicates(values, stat=np.mean, resamples: int = BOOTSTRAP_RESAMPLES, seed: int = BOOTSTRAP_SEED):
-    """The bootstrap replicates of stat over prompt groups (None without values)."""
+def _structure(items):
+    """Values, the value indices of each instance and the instance indices of each prompt group."""
+    vals = np.asarray([v for _, v in items], dtype=float)
+    inst = list(dict.fromkeys(n for n, _ in items))
+    ipos = {n: i for i, n in enumerate(inst)}
+    of_inst = [[] for _ in inst]
+    for j, (n, _) in enumerate(items):
+        of_inst[ipos[n]].append(j)
+    labels = [GROUPS.get(n, n) for n in inst]
+    order = list(dict.fromkeys(labels))
+    gpos = {g: i for i, g in enumerate(order)}
+    of_group = [[] for _ in order]
+    for i, g in enumerate(labels):
+        of_group[gpos[g]].append(i)
+    return vals, of_inst, of_group
+
+
+def counts(values) -> tuple:
+    """(instances, prompt groups) among the instances of values (None values dropped)."""
     items = _labelled(values)
     if not items:
-        return None
-    vals = np.asarray([v for _, v in items], dtype=float)
-    labels = [GROUPS.get(n, n) for n, _ in items]
+        return 0, 0
+    _, of_inst, of_group = _structure(items)
+    return len(of_inst), len(of_group)
+
+
+def n_groups(values) -> int:
+    """Prompt groups among the instances of values: {instance: value} (every key, None values included),
+    (instance, value) pairs or instance names."""
+    if isinstance(values, dict):
+        names = list(values)
+    else:
+        names = [x[0] if isinstance(x, tuple) else x for x in values]
+    return len({GROUPS.get(n, n) for n in names})
+
+
+def _one_stage(vals, labels, stat, resamples, seed):
+    """The bootstrap over prompt groups that keeps every value of every drawn group (one stage)."""
     order = list(dict.fromkeys(labels))
     rng = np.random.default_rng(seed)
     if len(order) == len(vals):                       # every group a single value: the instance bootstrap
@@ -94,10 +127,39 @@ def replicates(values, stat=np.mean, resamples: int = BOOTSTRAP_RESAMPLES, seed:
     gi = rng.integers(0, len(order), size=(resamples, len(order)))
     if stat is np.mean:
         sums = np.array([vals[m].sum() for m in members])
-        counts = np.array([len(m) for m in members], dtype=float)
-        return sums[gi].sum(axis=1) / counts[gi].sum(axis=1)
+        counts_ = np.array([len(m) for m in members], dtype=float)
+        return sums[gi].sum(axis=1) / counts_[gi].sum(axis=1)
     groups = [vals[m] for m in members]
     return np.array([stat(np.concatenate([groups[g] for g in row])) for row in gi])
+
+
+def replicates(values, stat=np.mean, resamples: int = BOOTSTRAP_RESAMPLES, seed: int = BOOTSTRAP_SEED):
+    """The bootstrap replicates of stat (None without values): two stages, prompt groups and then the instances
+    within each drawn group; the one-stage bootstrap when every group has one instance."""
+    items = _labelled(values)
+    if not items:
+        return None
+    vals, of_inst, of_group = _structure(items)
+    if all(len(m) == 1 for m in of_group):           # every group one instance: stage 2 is the identity
+        return _one_stage(vals, [GROUPS.get(n, n) for n, _ in items], stat, resamples, seed)
+    rng = np.random.default_rng(seed)
+    G = len(of_group)
+    gi = rng.integers(0, G, size=(resamples, G))                         # stage 1: prompt groups
+    size = np.array([len(m) for m in of_group])
+    start = np.concatenate([[0], np.cumsum(size)[:-1]])
+    flat = np.array([i for m in of_group for i in m])
+    drawn = size[gi].ravel()                                             # instances to draw per drawn group
+    local = rng.integers(0, np.repeat(drawn, drawn))                     # stage 2: instances within each group
+    inst = flat[np.repeat(start[gi].ravel(), drawn) + local]
+    rep = np.repeat(np.arange(resamples), size[gi].sum(axis=1))
+    if stat is np.mean:
+        isum = np.array([vals[m].sum() for m in of_inst])
+        icnt = np.array([len(m) for m in of_inst], dtype=float)
+        return (np.bincount(rep, weights=isum[inst], minlength=resamples)
+                / np.bincount(rep, weights=icnt[inst], minlength=resamples))
+    ivals = [vals[m] for m in of_inst]
+    cuts = np.cumsum(size[gi].sum(axis=1))[:-1]
+    return np.array([stat(np.concatenate([ivals[i] for i in row])) for row in np.split(inst, cuts)])
 
 
 def boot(values, stat=np.mean, resamples: int = BOOTSTRAP_RESAMPLES, seed: int = BOOTSTRAP_SEED):

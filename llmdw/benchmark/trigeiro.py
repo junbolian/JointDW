@@ -1,7 +1,7 @@
 """Trigeiro, Thomas and McClain (TTM) lot-sizing data: the suerie.de files, the plain TTM model, and the two checks of
 the data before any instance is built.
 
-suerie.de format (one folder test0XXX per instance): index.prn "items, periods, machines"; kapaz.prn capacity per period;
+suerie.de format (one folder test0NNN per instance): index.prn "items, periods, machines"; kapaz.prn capacity per period;
 l0.prn initial stock per item; lagkost.prn holding cost per item; p-bedarf.prn demand, one line per item over the periods;
 prodkoef.prn "machine, item, coefficient"; ruestk.prn setup cost per item; ruestz.prn "machine, item, setup time";
 UEBER-KS.PRN overtime cost per unit. conv_ttm_new.txt maps each folder number to a TTM name.

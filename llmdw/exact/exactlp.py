@@ -64,8 +64,21 @@ def _highs_solve(c, rows, col_lo, col_up):
     return h, status, basis
 
 
-def _verify(c, rows, col_lo, col_up, col_status, row_status):
-    """Exact check of a simplex basis. Returns (ok, obj, x) with exact Fractions."""
+# The basis system: the full basis matrix of [A | -I] (m x m), or the reduced system of the rows whose slack is
+# nonbasic and the basic structural columns (a row with a basic slack only fixes that slack, and its dual value is 0),
+# which has the same solution x and the same duals y. REDUCED_BASIS selects the default of _verify.
+REDUCED_BASIS = True
+CERTIFICATES = {False: "exact basis check, full basis matrix", True: "exact basis check, reduced basis system"}
+
+
+def certificate(reduced=None) -> str:
+    return CERTIFICATES[REDUCED_BASIS if reduced is None else bool(reduced)]
+
+
+def _verify(c, rows, col_lo, col_up, col_status, row_status, reduced=None):
+    """Exact check of a simplex basis. Returns (ok, obj, x) with exact Fractions. reduced: solve the reduced basis
+    system instead of the full basis matrix (REDUCED_BASIS by default); the checks are the same."""
+    reduced = REDUCED_BASIS if reduced is None else reduced
     import highspy
     from flint import fmpq, fmpq_mat
 
@@ -107,7 +120,29 @@ def _verify(c, rows, col_lo, col_up, col_status, row_status):
         if v != 0:
             for i, a in column(k).items():
                 rhs[i] -= a * v
-    if m:
+    if reduced:
+        bcols = [k for k in basic if k < n]
+        tight = [i for i in range(m) if status[n + i] != BS.kBasic]
+        if len(bcols) != len(tight):
+            return False, None, None
+        tpos = {i: q for q, i in enumerate(tight)}
+        if bcols:
+            Br = fmpq_mat(len(tight), len(bcols))
+            for p, k in enumerate(bcols):
+                for i, a in cols[k].items():
+                    q = tpos.get(i)
+                    if q is not None:
+                        Br[q, p] = _fq(a)
+            try:
+                zB = Br.solve(fmpq_mat(len(tight), 1, [_fq(rhs[i]) for i in tight]))
+            except ZeroDivisionError:
+                return False, None, None
+            for p, k in enumerate(bcols):
+                val[k] = _to_fraction(zB[p, 0])
+        for k in basic:                                   # a basic slack: the activity of its row
+            if k >= n:
+                val[k] = sum((Fraction(a) * val[j] for j, a in rows[k - n][0].items()), Fraction(0))
+    elif m:
         B = fmpq_mat(m, m)
         for p, k in enumerate(basic):
             for i, a in column(k).items():
@@ -127,7 +162,16 @@ def _verify(c, rows, col_lo, col_up, col_status, row_status):
             return False, None, None
     # duals: B^T y = c_B
     cost = [Fraction(v) for v in c] + [Fraction(0)] * m
-    if m:
+    if reduced:
+        yv = [Fraction(0)] * m                            # rows with a basic slack: dual value 0
+        if bcols:
+            try:
+                yr = Br.transpose().solve(fmpq_mat(len(bcols), 1, [_fq(cost[k]) for k in bcols]))
+            except ZeroDivisionError:
+                return False, None, None
+            for q, i in enumerate(tight):
+                yv[i] = _to_fraction(yr[q, 0])
+    elif m:
         cB = fmpq_mat(m, 1, [_fq(cost[k]) for k in basic])
         try:
             y = B.transpose().solve(cB)
@@ -197,7 +241,8 @@ def solve(c, rows, col_lo, col_up, sympy_limit: int = 4000) -> dict:
     if status == MS.kOptimal:
         ok, obj, x = _verify(c, rows, col_lo, col_up, basis.col_status, basis.row_status)
         if ok:
-            return {"status": "optimal", "obj": obj, "x": x, "verified": True, "method": "highs+exact_basis"}
+            return {"status": "optimal", "obj": obj, "x": x, "verified": True, "method": "highs+exact_basis",
+                    "certificate": certificate()}
     if len(c) * max(1, len(rows)) <= sympy_limit:
         obj, x = _sympy_solve(c, rows, col_lo, col_up)
         return {"status": "optimal", "obj": obj, "x": x, "verified": True, "method": "sympy_exact_simplex"}

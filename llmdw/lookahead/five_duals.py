@@ -15,9 +15,11 @@ arbitrary when the dual optimum is not unique.
 
 Usage
 -----
-python -m llmdw.lookahead.five_duals one --mps M --lookahead L.json --seed 1 --out D1.json [--block-time 60 --total-time 3600]
-python -m llmdw.lookahead.five_duals combine --lookahead L.json --duals D1.json D2.json D3.json D4.json --out L5.json
+python -m llmdw.lookahead.five_duals one --mps M --lookahead L.json --seed 1 --out dual1.json [--block-time 60 --total-time 3600]
+python -m llmdw.lookahead.five_duals combine --lookahead L.json --duals dual1.json dual2.json dual3.json dual4.json --out L5.json
 python -m llmdw.lookahead.five_duals batch --work work --out work/five_duals --parallel 20
+python -m llmdw.lookahead.five_duals batch --work work --out work/five_duals --parallel 4 \
+    --rich-root work/rich_models_large
     every instance of the three sets of the paper with its recorded lookahead: templates (work/templates,
     work/lookahead_templates; block time 60 s, no instance limit), the 102 scored MIPLIB-NL models (work/miplib_set,
     work/mps, work/lookahead; block time 60 s, instance limit 3600 s, as llmdw.gcg.batch lookahead) and the rich models
@@ -236,10 +238,18 @@ def combine(recorded: str, duals: list, out: str) -> dict:
     return res
 
 
-def jobs(work: Path, lookahead_root: Path | None = None) -> list:
+def jobs(work: Path, lookahead_root: Path | None = None, rich_root: Path | None = None) -> list:
     """(set, name, mps, recorded lookahead, block time, instance time) of every instance. The recorded single-dual
     tables are read from lookahead_root (default: work) with the layout lookahead_templates/<name>.json,
-    lookahead/<name>.json and rich_models/instances/<name>/lookahead.json."""
+    lookahead/<name>.json and rich_models/instances/<name>/lookahead.json. With rich_root, only the rich models of
+    that directory (the layout of the rich models: instances.txt, instances/<name>/model.mps and lookahead.json; the
+    larger rich models of llmdw.instances.rich_models_large), as the set rich_models_large, with the settings of the
+    rich models (block time 60 s, no instance limit)."""
+    if rich_root is not None:
+        rr = Path(rich_root)
+        return [("rich_models_large", n, str(rr / "instances" / n / "model.mps"),
+                 str(rr / "instances" / n / "lookahead.json"), 60.0, None)
+                for n in (rr / "instances.txt").read_text().split()]
     la = Path(lookahead_root or work)
     out = []
     for d in sorted(p for p in (work / "templates").iterdir() if (p / "model.mps").exists()):
@@ -256,7 +266,7 @@ def jobs(work: Path, lookahead_root: Path | None = None) -> list:
 
 
 def batch(work: Path, root: Path, parallel: int, lookahead_root: Path | None = None, high_memory: set | None = None,
-          high_memory_gb: float = 10.0, defer_high_memory: bool = False) -> None:
+          high_memory_gb: float = 10.0, defer_high_memory: bool = False, rich_root: Path | None = None) -> None:
     import subprocess
     import sys
     from concurrent.futures import ThreadPoolExecutor
@@ -267,8 +277,8 @@ def batch(work: Path, root: Path, parallel: int, lookahead_root: Path | None = N
     env = dict(os.environ, OMP_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1", MKL_NUM_THREADS="1",
                PYTHONPATH=str(repo) + os.pathsep + os.environ.get("PYTHONPATH", ""))
     cap = os.environ.get("LLMDW_CHILD_MEMORY_GB")
-    todo = []
-    for phase, name, mps, rec, bt, tt in jobs(work, lookahead_root):
+    pending = []
+    for phase, name, mps, rec, bt, tt in jobs(work, lookahead_root, rich_root):
         missing = [x for x in (mps, rec) if not Path(x).exists()]
         if missing:
             print(f"{phase}/{name}: missing {missing}", flush=True)
@@ -276,10 +286,10 @@ def batch(work: Path, root: Path, parallel: int, lookahead_root: Path | None = N
         if defer_high_memory and name in (high_memory or ()):
             continue        # left for a later run of the batch (resumable)
         for seed in DUAL_SEEDS:
-            todo.append((phase, name, mps, rec, bt, tt, seed))
+            pending.append((phase, name, mps, rec, bt, tt, seed))
     # longest recorded lookahead first
-    rec_secs = {r: json.loads(Path(r).read_text()).get("seconds") or 0 for _, _, _, r, _, _, _ in todo}
-    todo.sort(key=lambda j: -rec_secs[j[3]])
+    rec_secs = {r: json.loads(Path(r).read_text()).get("seconds") or 0 for _, _, _, r, _, _, _ in pending}
+    pending.sort(key=lambda j: -rec_secs[j[3]])
 
     def work_one(j):
         phase, name, mps, rec, bt, tt, seed = j
@@ -326,9 +336,9 @@ def batch(work: Path, root: Path, parallel: int, lookahead_root: Path | None = N
         return j, f"failed (exits {codes})"
 
     with ThreadPoolExecutor(max_workers=parallel) as pool:
-        for j, st in pool.map(work_one, todo):
+        for j, st in pool.map(work_one, pending):
             print(f"{j[0]}/{j[1]} seed {j[6]}: {st}", flush=True)
-    for phase, name, mps, rec, bt, tt in jobs(work, lookahead_root):
+    for phase, name, mps, rec, bt, tt in jobs(work, lookahead_root, rich_root):
         d = root / phase / name
         ds = [d / f"dual{s}.json" for s in DUAL_SEEDS]
         if all(x.exists() for x in ds):
@@ -358,11 +368,12 @@ def main(argv=None) -> int:
     b.add_argument("--high-memory-gb", type=float, default=10.0)
     b.add_argument("--defer-high-memory", action="store_true",
                    help="skip the --high-memory instances in this run (scheduling only; a later run computes them)")
+    b.add_argument("--rich-root", help="only the rich models of this directory (set rich_models_large; see jobs)")
     args = ap.parse_args(argv)
     if args.cmd == "batch":
         high = set(Path(args.high_memory).read_text(encoding="utf-8").split()) if args.high_memory else set()
         batch(Path(args.work), Path(args.out), args.parallel, Path(args.lookahead_root) if args.lookahead_root else None,
-              high, args.high_memory_gb, args.defer_high_memory)
+              high, args.high_memory_gb, args.defer_high_memory, Path(args.rich_root) if args.rich_root else None)
         return 0
     if args.cmd == "one":
         r = one(args.mps, args.lookahead, args.seed, args.out, args.block_time, args.total_time)

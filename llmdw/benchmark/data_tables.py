@@ -15,8 +15,8 @@ Outputs:
   benchmark_data_methods.csv      per class and pooled, each method (the four methods without samples, the two
                                   configurations under the original presentation and under the data variant): hit@1, gain,
                                   time, final gap, solved, samples without a set and without a joint support, and the
-                                  geometric mean time ratio (t + 1 s) / (t_best + 1 s) against the true best set with its
-                                  interval and asterisk
+                                  geometric mean time ratio (t + 1 s) / (t_best + 1 s) against the true best set with
+                                  its standard error (the SE of the mean log ratio times the geometric mean) and asterisk
   benchmark_data_paired.csv       per class and pooled, each configuration under the data variant minus the single-dual
                                   lookahead, the five-dual lookahead, GCG's detector and the same configuration under the
                                   original presentation: paired differences of hit@1, gain and time
@@ -69,7 +69,7 @@ def build(root: Path, names: list, answers: dict, data_answers: dict) -> dict:
     meth = []
     for r in tabs["methods"]:
         x = ratio.get((r["class"], r["method"]), {})
-        row = {**r, **{k: x.get(k) for k in ("geometric_mean_ratio", "ratio_lo", "ratio_hi", "se_log_ratio",
+        row = {**r, **{k: x.get(k) for k in ("geometric_mean_ratio", "ratio_se", "ratio_lo", "ratio_hi", "se_log_ratio",
                                              "asterisk")}}
         row["ratio_asterisk"] = row.pop("asterisk")
         if r["method"].endswith(DATA):

@@ -293,10 +293,10 @@ def _reference(args) -> dict:
 
 
 def cmd_reference(root: Path, parallel: int, names=None, time_limit: float = REFERENCE_TIME) -> None:
-    todo = [root / "instances" / n for n in (names or (root / "built.txt").read_text().split())
+    pending = [root / "instances" / n for n in (names or (root / "built.txt").read_text().split())
             if not (root / "instances" / n / "reference.json").exists()]
     with ProcessPoolExecutor(max_workers=parallel) as pool:
-        for d, r in zip(todo, pool.map(_reference, [(str(d), time_limit) for d in todo])):
+        for d, r in zip(pending, pool.map(_reference, [(str(d), time_limit) for d in pending])):
             print(f"{d.name:24s} {r['status']:12s} best {r['best_value']} gap {r['gap']} {r['seconds']} s", flush=True)
 
 

@@ -2,7 +2,7 @@
 
 FAMILY_ORDERS        random orders of the families per instance; every search cost is the mean over them
 FAMILY_ORDER_SEED    entropy of numpy's SeedSequence; each instance has its own stream, keyed by its name
-BOOTSTRAP_RESAMPLES  resamples of the cluster bootstrap, which resamples prompt groups
+BOOTSTRAP_RESAMPLES  resamples of the two-stage bootstrap (prompt groups, then instances within each drawn group)
 BOOTSTRAP_SEED       seed of numpy's default_rng for every bootstrap
 TIE_TOL              lookahead values within this distance are tied
 """

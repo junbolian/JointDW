@@ -65,12 +65,13 @@ def _first_of_order(fams, lookahead_table: dict):
     return sorted(order[0]) if order else None
 
 
-def plan(root: Path, name: str, answers: dict, plan_file: str = "bnp_plan.json") -> dict:
+def plan(root: Path, name: str, answers: dict, plan_file: str = "bnp_plan.json", truth: dict | None = None) -> dict:
+    """The plan of one instance (module docstring); truth replaces _truth (the gain table) when given."""
     from llmdw.instances.families import read_model, summarize
     from llmdw.scoring import results
 
     d = root / "instances" / name
-    t = _truth(d)
+    t = truth if truth is not None else _truth(d)
     fams, tab = t["families"], t["table"]
     best = max(tab.values())
     tops = sorted((T for T, v in tab.items() if v >= best - 1e-9), key=lambda T: (len(T), sorted(T)))
@@ -106,8 +107,10 @@ def _root_bound(log: str):
     return float(m.group(1))
 
 
-def _bnp(d: Path, name: str, T, seed: int) -> dict:
-    """One branch-and-price run; the result row (written next to its log)."""
+def _bnp(d: Path, name: str, T, seed: int, attempt: int = 0) -> dict:
+    """One branch-and-price run; the result row (written next to its log). T is a family set, "gcg_default" (GCG as
+    shipped) or "scip" (SCIP alone on the original formulation); attempt >= 1 repeats a run with the same seed (files
+    with the suffix .r<attempt>)."""
     from llmdw.gcg import gcg_run
     from llmdw.gcg.dec_io import from_master_families, write_dec
     from llmdw.gcg.oracle import key_tag
@@ -116,8 +119,8 @@ def _bnp(d: Path, name: str, T, seed: int) -> dict:
     out = d / "bnp"
     out.mkdir(exist_ok=True)
     mps = str(d / "model.mps")
-    key = "gcg_default" if T == "gcg_default" else set_key(T)
-    tag = ("gcg_default" if T == "gcg_default" else key_tag(key)) + (f".s{seed}" if seed else "")
+    key = T if T in ("gcg_default", "scip") else set_key(T)
+    tag = (T if T in ("gcg_default", "scip") else key_tag(key)) + (f".s{seed}" if seed else "") + (f".r{attempt}" if attempt else "")
     res_path = out / f"{tag}.row.json"
     if res_path.exists():
         return json.loads(res_path.read_text())
@@ -125,6 +128,9 @@ def _bnp(d: Path, name: str, T, seed: int) -> dict:
         # solve-time experiment: SCIP's default propagation (bound evaluations use propagation off, llmdw.gcg.gcg_run)
         res = gcg_run.run("gcg-default", mps, str(out / f"{tag}.json"), time_limit=BNP_TIME, seed=seed,
                           propagation="default")
+    elif T == "scip":
+        # reference: SCIP alone on the original formulation (one thread, the same limit and seed)
+        res = gcg_run.run("scip", mps, str(out / f"{tag}.json"), time_limit=BNP_TIME, seed=seed, propagation="default")
     else:
         model = read_model(mps)
         fams = sorted({family_of(r.name) for r in model.rows})
@@ -137,7 +143,10 @@ def _bnp(d: Path, name: str, T, seed: int) -> dict:
     log = out / f"{tag}.log"
     row = {"instance": name, "set": key, "tag": tag, "time_limit": BNP_TIME, "seed": seed,
            **{k: res.get(k) for k in ("ok", "status", "dual_bound", "primal_bound", "nodes", "solving_time",
-                                      "wall_seconds", "blocks", "linking_vars", "error", "exit_code", "propagation")}}
+                                      "wall_seconds", "blocks", "linking_vars", "error", "exit_code", "propagation",
+                                      # contention at the start and end of the solve (llmdw.gcg.gcg_run.run)
+                                      "started_at", "ended_at", "load1_start", "load1_end", "mem_available_gb_start",
+                                      "mem_available_gb_end", "solver_processes_start", "slot_wait_seconds")}}
     row["root_bound"] = _root_bound(log.read_text(encoding="utf-8", errors="replace")) if log.exists() else None
     row["root_bound_source"] = "root node statistics" if row["root_bound"] is not None else None
     if row["root_bound"] is None and row.get("nodes") == 1 and row.get("status") == "optimal":
@@ -273,10 +282,10 @@ def main(argv=None) -> int:
     elif args.cmd == "report":
         report(root, names)
     else:
-        todo = [j for n in names for j in jobs_of(root, n, args.plan_file)]
-        print(f"{len(todo)} branch-and-price runs", flush=True)
+        pending = [j for n in names for j in jobs_of(root, n, args.plan_file)]
+        print(f"{len(pending)} branch-and-price runs", flush=True)
         with ThreadPoolExecutor(max_workers=args.parallel) as pool:
-            for r in pool.map(run_one, todo):
+            for r in pool.map(run_one, pending):
                 print(json.dumps({k: r.get(k) for k in ("instance", "set", "status", "solving_time", "gap", "nodes")}),
                       flush=True)
     return 0

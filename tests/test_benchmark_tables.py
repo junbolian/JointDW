@@ -51,3 +51,26 @@ def test_tables_rows_and_failed_twice_listing():
     assert len(pj) == 3 and next(r for r in pj if r["against"] == "GCG default")["mean_difference"] == -3.0
     tb = next(r for r in t["paired_true_best"] if r["class"] == "all" and r["method"] == "X")
     assert math.isclose(tb["geometric_mean_ratio"], 1.5) and tb["gap_mean_difference"] == 0.0
+
+
+def test_one_prompt_group_per_class_gives_a_spread_and_ratio_standard_errors():
+    # three lot-sizing instances share one prompt; their times differ
+    cluster.set_groups({"i0": "p", "i1": "p", "i2": "p"})
+    vals = {}
+    for i, t in enumerate((10.0, 100.0, 1000.0)):
+        ms = {"true best set": _one("A|B", True, 1.0, t, 0.0),
+              "lookahead (single dual)": _one("A", False, 0.0, 2 * t, 0.01),
+              "lookahead (five duals)": _one("A|B", True, 1.0, t, 0.0),
+              "GCG default": _one("B|C", False, 0.0, t + i, 0.0),
+              "X": _one("A|B", True, 1.0, t, 0.0)}
+        vals[f"i{i}"] = _v("lot_sizing", ms)
+    t = tables.tables(vals, ["X"])
+    row = next(r for r in t["methods"] if r["class"] == "lot_sizing" and r["method"] == "true best set")
+    assert row["n_instances"] == 3 and row["n_groups"] == 1 and row["time_groups"] == 1 and row["time_se"] > 0
+    assert next(r for r in t["zero_marginal"] if r["class"] == "lot_sizing")["n_groups"] == 1
+    tb = next(r for r in t["paired_true_best"] if r["class"] == "lot_sizing" and r["method"] == "lookahead (single dual)")
+    assert tb["n_groups"] == 1 and tb["se_log_ratio"] > 0
+    assert math.isclose(tb["ratio_se"], tb["geometric_mean_ratio"] * tb["se_log_ratio"])
+    pj = next(r for r in t["paired_jointdw"] if r["class"] == "lot_sizing" and r["against"] == "GCG default")
+    assert pj["n_groups"] == 1 and pj["se_difference"] > 0
+    cluster.set_groups({})

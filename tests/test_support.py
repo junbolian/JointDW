@@ -246,24 +246,24 @@ def test_large_model_orders():
     from llmdw.scoring import large_models as lm
     from llmdw.search import search_sim
 
-    fams = [f"F{i}" for i in range(7)]
+    fams = [f"fam{i}" for i in range(7)]
     design = lm.covering_design(fams, 100)
     pairs = {frozenset(p) for T in design for p in itertools.combinations(sorted(T), 2)}
     assert len(pairs) == 21 and all(len(T) == 3 for T in design)          # every pair covered by sets of 3
     assert lm.covering_design(fams, 4) == design[:4]                      # lazy prefix, fixed by the family order
     assert lm.random_order(fams, 1, 10) == lm.random_order(fams, 1, 10) != lm.random_order(fams, 2, 10)
-    P = frozenset({"F1", "F4"})
+    P = frozenset({"fam1", "fam4"})
     assert lm.staged_lazy(fams, 3, P, 5) == search_sim.staged_order(fams, 3, P)[:len(lm.staged_lazy(fams, 3, P, 5))]
     assert len(lm.staged_lazy(fams, 3, P, 5)) >= 5
     assert lm.covering_lazy(fams, 3, 4) == search_sim.covering_order(fams, 3)[:len(lm.covering_lazy(fams, 3, 4))]
-    table = {frozenset(c): float(len(c) == 2 and set(c) == {"F1", "F4"}) for r in range(4)
+    table = {frozenset(c): float(len(c) == 2 and set(c) == {"fam1", "fam4"}) for r in range(4)
              for c in itertools.combinations(fams, r)}
     order = lm.jointdw_order(fams, P, 10)
     assert search_sim._first_hit(order, table) == search_sim.robust(table, 3, P)   # the same search as robust
-    la = {"table": {"a": {"families": ["F1", "F4"], "lookahead": 2.0}, "b": {"families": ["F0"], "lookahead": 2.0},
-                    "c": {"families": ["F2"], "lookahead": None}}}
+    la = {"table": {"a": {"families": ["fam1", "fam4"], "lookahead": 2.0}, "b": {"families": ["fam0"], "lookahead": 2.0},
+                    "c": {"families": ["fam2"], "lookahead": None}}}
     lo = lm.lookahead_order(fams, la)
-    assert lo[:2] == [frozenset({"F0"}), frozenset({"F1", "F4"})] and len(lo) == len(lm.all_sets(fams))
+    assert lo[:2] == [frozenset({"fam0"}), frozenset({"fam1", "fam4"})] and len(lo) == len(lm.all_sets(fams))
     assert lm.method_family("jointdw|cfg_a|s1") == ("jointdw", "cfg_a") and lm.method_family("random_2") == ("random", "")
 
 

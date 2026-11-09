@@ -7,6 +7,8 @@ names, in the order of the paper.
 
 Files written to --out:
   table_01.tex ... table_15.tex   one body per table (Tables 1, 2, 6 to 15)
+  cells/table_01.csv ...          per cell of each body: n, prompt groups, mean, standard error, asterisk flag
+                                  (llmdw.tables.cells)
   figure_1.csv                    share of the LP gap closed by every family set of the template clsp_2x2 (with --work)
   figure_2a.csv                   the queries of the staged search for k = 6, s = 3, w = 2 and the prediction {1, 2}
   figure_2b.csv                   staged-search queries and lower bounds for w = 3, s = 6 (the CSV of llmdw.tables.figure2)
@@ -30,6 +32,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from llmdw.providers import settings
+from llmdw.tables.cells import Cells
 
 PHASES = [("templates", "Templates"), ("miplib", "MIPLIB-NL")]
 PRESENTATIONS = ["original", "names_only", "permuted", "anonymized"]
@@ -79,23 +82,38 @@ def heading(n: int, text: str) -> str:
     return f"\\multicolumn{{{n}}}{{@{{}}l}}{{\\emph{{{text}}}}} \\\\"
 
 
-def tables(results: Path) -> dict[int, str]:
-    """{table number: LaTeX body}."""
+def _excludes(r) -> bool:
+    return float(r["lo"]) > 0 or float(r["hi"]) < 0
+
+
+def tables(results: Path, cells: dict | None = None) -> dict[int, str]:
+    """{table number: LaTeX body}; with cells (a dict), also {table number: Cells}, the cell records of each body
+    (llmdw.tables.cells)."""
     cfg = configurations()
     pred = {(r["phase"], r["config"], r["presentation"]): r for r in read(results, "prediction.csv") if r["class"] == "all"}
     alarm = {r["config"]: r for r in read(results, "false_alarm.csv") if r["presentation"] == "original"}
     look = {r["phase"]: r for r in read(results, "lookahead_like_models.csv") if r["m"] == "1"}
     out = {}
+    C = {n: Cells(f"table_{n:02d}") for n in (1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)}
+    if cells is not None:
+        cells.update(C)
 
     rows = []
     for c in cfg:
         a, b = pred[("templates", c, "original")], pred[("miplib", c, "original")]
         rows.append(f"{c} & {fmt(a['hit1'])} & {fmt(a['recall'])} & {fmt(b['hit1'])} & {fmt(b['recall'])} & "
                     f"{fmt(alarm[c]['false_alarm'])} \\\\")
+        for col, r, k in (("Templates hit@1", a, "hit1"), ("Templates recall", a, "recall"),
+                          ("MIPLIB-NL hit@1", b, "hit1"), ("MIPLIB-NL recall", b, "recall"),
+                          ("False alarms", alarm[c], "false_alarm")):
+            C[1].add(c, col, r, r[k], r[f"{k}_se"])
     rows.append("\\midrule")
     t, m = look["templates"], look["miplib"]
     rows.append(f"Lookahead order & {fmt(t['lookahead_hit1'])} & {fmt(t['lookahead_recall_at_m'])} & "
                 f"{fmt(m['lookahead_hit1'])} & {fmt(m['lookahead_recall_at_m'])} & -- \\\\")
+    for col, r, k in (("Templates hit@1", t, "lookahead_hit1"), ("Templates recall", t, "lookahead_recall_at_m"),
+                      ("MIPLIB-NL hit@1", m, "lookahead_hit1"), ("MIPLIB-NL recall", m, "lookahead_recall_at_m")):
+        C[1].add("Lookahead order", col, r, r[k], r[f"{k}_se"])
     out[1] = "\n".join(rows) + "\n"
 
     sbs = {(r["phase"], r["limit"], r["method"], r["config"]): r for r in read(results, "search_by_size.csv")
@@ -105,16 +123,19 @@ def tables(results: Path) -> dict[int, str]:
     cols = [(p, lim) for p, _ in PHASES for lim in LIMITS]
     best = {col: min(rounded(sbs[(col[0], col[1], m, c)]["mean"]) for _, m, c in methods if m != "random")
             for col in cols}
+    titles = dict(PHASES)
     rows = []
     for i, (label, m, c) in enumerate(methods):
-        cells = []
+        cells_ = []
         for col in cols:
-            v = sbs[(col[0], col[1], m, c)]["mean"]
+            r = sbs[(col[0], col[1], m, c)]
+            v = r["mean"]
             s = fmt(v)
             if m != "random" and rounded(v) == best[col]:
                 s = f"\\textbf{{{s}}}"
-            cells.append(s)
-        rows.append(f"{label} & " + " & ".join(cells) + " \\\\")
+            cells_.append(s)
+            C[2].add(label, f"{titles[col[0]]} s={col[1]}", r, v, r["mean_se"])
+        rows.append(f"{label} & " + " & ".join(cells_) + " \\\\")
         if i == 2:
             rows.append("\\midrule")
     out[2] = "\n".join(rows) + "\n"
@@ -122,9 +143,13 @@ def tables(results: Path) -> dict[int, str]:
     rows = []
     for p, title in PHASES:
         rows.append(heading(5, title))
+        C[6].heading(title)
         for c in cfg:
             rows.append(f"{c} & " + " & ".join(pm(pred[(p, c, k)]["recall"], pred[(p, c, k)]["recall_se"])
                                                for k in PRESENTATIONS) + " \\\\")
+            for k in PRESENTATIONS:
+                r = pred[(p, c, k)]
+                C[6].add(c, PRESENTATION_NAMES[k], r, r["recall"], r["recall_se"])
     out[6] = "\n".join(rows) + "\n"
 
     paired = {(r["phase"], r["config"], r["contrast"]): r for r in read(results, "paired.csv")}
@@ -132,29 +157,43 @@ def tables(results: Path) -> dict[int, str]:
     rows = []
     for p, title in PHASES:
         rows.append(heading(4, title))
+        C[7].heading(title)
         for c in cfg:
-            cells = [pm(paired[(p, c, k)]["mean_difference"], paired[(p, c, k)]["se_difference"])
-                     + star(paired[(p, c, k)]["lo"], paired[(p, c, k)]["hi"]) for k in contrasts]
-            rows.append(f"{c} & " + " & ".join(cells) + " \\\\")
+            cells_ = [pm(paired[(p, c, k)]["mean_difference"], paired[(p, c, k)]["se_difference"])
+                      + star(paired[(p, c, k)]["lo"], paired[(p, c, k)]["hi"]) for k in contrasts]
+            rows.append(f"{c} & " + " & ".join(cells_) + " \\\\")
+            for k in contrasts:
+                r = paired[(p, c, k)]
+                a, b = k.split(" minus ")
+                C[7].add(c, f"{PRESENTATION_NAMES[a]} - {PRESENTATION_NAMES[b].lower()}", r, r["mean_difference"],
+                         r["se_difference"], _excludes(r))
     out[7] = "\n".join(rows) + "\n"
 
     pc = {(r["phase"], r["presentation"], r["measure"]): r for r in read(results, "paired_configs.csv")}
     rows = []
     for p, title in PHASES:
         rows.append(heading(3, title))
+        C[8].heading(title)
         for k in PRESENTATIONS:
-            cells = [pm(pc[(p, k, meas)]["mean_difference"], pc[(p, k, meas)]["se_difference"])
-                     + star(pc[(p, k, meas)]["lo"], pc[(p, k, meas)]["hi"]) for meas in ("joint_hit1", "joint_recall")]
-            rows.append(f"{PRESENTATION_NAMES[k]} & " + " & ".join(cells) + " \\\\")
+            cells_ = [pm(pc[(p, k, meas)]["mean_difference"], pc[(p, k, meas)]["se_difference"])
+                      + star(pc[(p, k, meas)]["lo"], pc[(p, k, meas)]["hi"]) for meas in ("joint_hit1", "joint_recall")]
+            rows.append(f"{PRESENTATION_NAMES[k]} & " + " & ".join(cells_) + " \\\\")
+            for meas, col in (("joint_hit1", "hit@1"), ("joint_recall", "recall")):
+                r = pc[(p, k, meas)]
+                C[8].add(PRESENTATION_NAMES[k], col, r, r["mean_difference"], r["se_difference"], _excludes(r))
     out[8] = "\n".join(rows) + "\n"
 
     rows = []
     for p, title in PHASES:
         rows.append(heading(4, title))
+        C[9].heading(title)
         for label, m, c in ([("Random order", "random", ""), ("Covering order", "covering", ""),
                              ("Lookahead order", "lookahead", "")] + [(f"JointDW, {c}", "jointdw", c) for c in cfg]):
             rows.append(f"{label} & " + " & ".join(pm(sbs[(p, lim, m, c)]["mean"], sbs[(p, lim, m, c)]["mean_se"])
                                                    for lim in LIMITS) + " \\\\")
+            for lim in LIMITS:
+                r = sbs[(p, lim, m, c)]
+                C[9].add(label, f"s={lim}", r, r["mean"], r["mean_se"])
     out[9] = "\n".join(rows) + "\n"
 
     def count(x):
@@ -167,6 +206,9 @@ def tables(results: Path) -> dict[int, str]:
             r = comp[(p, c)]
             rows.append(f"{title} & {c} & {count(r['both'])} & {count(r['model_only'])} & {count(r['lookahead_only'])} & "
                         f"{count(r['neither'])} \\\\")
+            for k, col in (("both", "Both"), ("model_only", "Model only"), ("lookahead_only", "Lookahead only"),
+                           ("neither", "Neither")):
+                C[10].add(f"{title}, {c}", col, r, r[k])
     out[10] = "\n".join(rows) + "\n"
 
     text = {r["config"]: r for r in read(results, "rich_models_prediction.csv") if r["class"] == "all"}
@@ -174,6 +216,10 @@ def tables(results: Path) -> dict[int, str]:
     out[11] = "\n".join(f"{c} & {pm(text[c]['hit1'], text[c]['hit1_se'])} & {pm(data[c]['hit1'], data[c]['hit1_se'])} & "
                         f"{pm(text[c]['recall'], text[c]['recall_se'])} & {pm(data[c]['recall'], data[c]['recall_se'])} \\\\"
                         for c in cfg) + "\n"
+    for c in cfg:
+        for k in ("hit1", "recall"):
+            for r, col in ((text[c], "text"), (data[c], "coefficients")):
+                C[11].add(c, f"{'hit@1' if k == 'hit1' else k}, {col}", r, r[k], r[f"{k}_se"])
 
     s0 = {(r["s"], r["method"], r["config"]): r for r in read(results, "rich_models_search.csv") if r["class"] == "all"}
     s1 = {(r["s"], r["method"], r["config"]): r for r in read(results, "rich_models_with_data_search.csv")
@@ -182,17 +228,25 @@ def tables(results: Path) -> dict[int, str]:
     for label, m in [("Random order", "random"), ("Covering order", "covering"), ("Lookahead order", "lookahead")]:
         rows.append(f"{label} & \\multicolumn{{2}}{{c}}{{{pm(s0[('2', m, '')]['mean'], s0[('2', m, '')]['mean_se'])}}} & "
                     f"\\multicolumn{{2}}{{c}}{{{pm(s0[('3', m, '')]['mean'], s0[('3', m, '')]['mean_se'])}}} \\\\")
+        for s in ("2", "3"):
+            r = s0[(s, m, "")]
+            C[12].add(label, f"s={s}", r, r["mean"], r["mean_se"])
     r2, r3 = s0[("2", "gcg_anchor_gcg_spfwh_names", "")], s0[("3", "gcg_anchor_gcg_spfwh_names", "")]
     rows.append(f"GCG anchor, {r2['n_instances']} instances & \\multicolumn{{2}}{{c}}{{{pm(r2['mean'], r2['mean_se'])}}} & "
                 f"\\multicolumn{{2}}{{c}}{{{pm(r3['mean'], r3['mean_se'])}}} \\\\")
+    for s, r in (("2", r2), ("3", r3)):
+        C[12].add(f"GCG anchor, {r2['n_instances']} instances", f"s={s}", r, r["mean"], r["mean_se"])
     for m, title in [("jointdw", "JointDW"), ("interleaved", "Interleaved with lookahead")]:
         rows.append(heading(5, title))
+        C[12].heading(title)
         for c in cfg:
-            cells = []
+            cells_ = []
             for s in ("2", "3"):
-                cells += [pm(s0[(s, m, c)]["mean"], s0[(s, m, c)]["mean_se"]),
-                          pm(s1[(s, m, c)]["mean"], s1[(s, m, c)]["mean_se"])]
-            rows.append(f"{c} & " + " & ".join(cells) + " \\\\")
+                cells_ += [pm(s0[(s, m, c)]["mean"], s0[(s, m, c)]["mean_se"]),
+                           pm(s1[(s, m, c)]["mean"], s1[(s, m, c)]["mean_se"])]
+                for r, col in ((s0[(s, m, c)], "text"), (s1[(s, m, c)], "coefficients")):
+                    C[12].add(c, f"s={s}, {col}", r, r["mean"], r["mean_se"])
+            rows.append(f"{c} & " + " & ".join(cells_) + " \\\\")
     out[12] = "\n".join(rows) + "\n"
 
     rp = {(r["phase"], r["limit"], r["config"]): r for r in read(results, "ranked_prompt.csv")}
@@ -200,32 +254,40 @@ def tables(results: Path) -> dict[int, str]:
     rows = []
     for p, title in [("miplib", "MIPLIB-NL"), (RICH_PHASE, "Rich models")]:
         rows.append(heading(5, title))
+        C[13].heading(title)
         for c in cfg:
             r = rp[(p, "2", c)]
-            cells = [pm(r["coverage_at_1"], r["coverage_at_1_se"]), pm(r["coverage_at_3"], r["coverage_at_3_se"])]
+            cells_ = [pm(r["coverage_at_1"], r["coverage_at_1_se"]), pm(r["coverage_at_3"], r["coverage_at_3_se"])]
+            C[13].add(c, "coverage of the first group, s=2", r, r["coverage_at_1"], r["coverage_at_1_se"])
+            C[13].add(c, "coverage of the first three groups, s=2", r, r["coverage_at_3"], r["coverage_at_3_se"])
             for s in ("2", "3"):
                 q = rpp[(p, s, c, "ranked+lookahead minus lookahead")]
-                cells.append(pm(q["mean_difference"], q["se_difference"]) + star(q["lo"], q["hi"]))
-            rows.append(f"{c} & " + " & ".join(cells) + " \\\\")
+                cells_.append(pm(q["mean_difference"], q["se_difference"]) + star(q["lo"], q["hi"]))
+                C[13].add(c, f"ranked interleaved with lookahead minus lookahead, s={s}", q, q["mean_difference"],
+                          q["se_difference"], _excludes(q))
+            rows.append(f"{c} & " + " & ".join(cells_) + " \\\\")
     out[13] = "\n".join(rows) + "\n"
 
     ps = {(r["phase"], r["limit"], r["config"], r["unit"], r["contrast"]): r for r in read(results, "paired_search.csv")}
 
-    def paired_blocks(blocks):
+    def paired_blocks(blocks, rec):
         rows = []
         for p, unit, title in blocks:
             for lim in LIMITS:
                 rows.append(heading(5, f"{title}, {LIMIT_NAMES[lim]}"))
+                rec.heading(f"{title}, s={lim}")
                 for c in cfg:
-                    cells = []
+                    cells_ = []
                     for k in PAIRED:
                         r = ps[(p, lim, c, unit, k)]
-                        cells.append(pm(r["mean_difference"], r["se_difference"]) + star(r["lo"], r["hi"]))
-                    rows.append(f"{c} & " + " & ".join(cells) + " \\\\")
+                        cells_.append(pm(r["mean_difference"], r["se_difference"]) + star(r["lo"], r["hi"]))
+                        rec.add(c, k.replace("jointdw", "JointDW"), r, r["mean_difference"], r["se_difference"],
+                                _excludes(r))
+                    rows.append(f"{c} & " + " & ".join(cells_) + " \\\\")
         return "\n".join(rows) + "\n"
-    out[14] = paired_blocks([("miplib", "seconds", "MIPLIB-NL, seconds")])
+    out[14] = paired_blocks([("miplib", "seconds", "MIPLIB-NL, seconds")], C[14])
     out[15] = paired_blocks([("templates", "evaluations", "Templates, evaluations"),
-                             ("miplib", "evaluations", "MIPLIB-NL, evaluations")])
+                             ("miplib", "evaluations", "MIPLIB-NL, evaluations")], C[15])
     return out
 
 
@@ -302,7 +364,8 @@ def figures(results: Path, out: Path) -> list[str]:
         return f"{float(r['hit1_mean']):.3f}" if r else ""
     with open(out / "figure_4a.csv", "w", newline="", encoding="utf-8") as fh:
         w = csv.writer(fh)
-        w.writerow(["configuration", "hit1_text", "hit1_every_coefficient", "hit1_data_permuted", "hit1_data_anonymized"])
+        w.writerow(["configuration", "hit1_text", "hit1_every_coefficient", "hit1_coefficients_names_permuted",
+                    "hit1_coefficients_names_anonymized"])
         for c in cfg:
             w.writerow([c, f"{float(text[c]['hit1']):.3f}", f"{float(data[c]['hit1']):.3f}",
                         control(c, "data, permuted"), control(c, "data, anonymized")])
@@ -337,8 +400,10 @@ def main(argv=None) -> int:
     args = ap.parse_args(argv)
     res, out = Path(args.results), Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    for n, body in tables(res).items():
+    cells = {}
+    for n, body in tables(res, cells).items():
         (out / f"table_{n:02d}.tex").write_text(body, encoding="utf-8")
+        cells[n].write(out / "cells" / f"table_{n:02d}.csv")
     figures(res, out)
     if args.work:
         figure_1(Path(args.work), out)

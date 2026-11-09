@@ -90,6 +90,22 @@
    "kind": "data"
   },
   {
+   "source": "orlib_binpack",
+   "file": "binpack1.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/binpack1.txt",
+   "bytes": 7664,
+   "sha256": "891fe4b3be86371b120ccaf37ce4525b5b0a2fc249d38725cd3216fbaa42b172",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_binpack",
+   "file": "binpackinfo.html",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/binpackinfo.html",
+   "bytes": 3208,
+   "sha256": "15937660a61f827c70073d1fa3648df7781b61e4e9789cc482e482411e4fa889",
+   "kind": "page"
+  },
+  {
    "source": "orlib_cap",
    "file": "cap101.txt",
    "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/cap101.txt",
@@ -391,6 +407,110 @@
    "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/capinfo.html",
    "bytes": 2773,
    "sha256": "1212ed0c0a698ce7bd2c52ea0a283172468a59ca12e01e46c82ddc87fbe99b08",
+   "kind": "page"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap1.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap1.txt",
+   "bytes": 2336,
+   "sha256": "3395ba9f775d5a608ad107e946021a89688bc0d62b5a5c07585744ea98b1d706",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap10.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap10.txt",
+   "bytes": 11898,
+   "sha256": "cf61d6b2c94ae2e6c74ba2b6afb787672b03c52980d08755ce2aca513de0fcf5",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap11.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap11.txt",
+   "bytes": 15006,
+   "sha256": "baa3d922c87daa41f57bbfb6d2f550cc052e19cacb248911d25719e470dd10fc",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap12.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap12.txt",
+   "bytes": 17766,
+   "sha256": "1d2194a19ba44a57ac13df745c181e4f7a7e665a426a9602336262803665fa8f",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap2.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap2.txt",
+   "bytes": 3095,
+   "sha256": "84ea4769a7a03e87746be10951fe64b32572c90be4c1c531ae92d437c2c8577b",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap3.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap3.txt",
+   "bytes": 3800,
+   "sha256": "1f3e510ed64f51d66ae937da92c47f129296de910134832ec68e3d088c0ca1b2",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap4.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap4.txt",
+   "bytes": 4597,
+   "sha256": "5dd459ffba5bd9230ca4564eed60a15e969b40425980fcd86d1179fe57a6c0a4",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap5.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap5.txt",
+   "bytes": 5841,
+   "sha256": "ee5348cba2f894370273a16a8c157795f0e480f1f65fb645e36b6d1cb9e16eb5",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap6.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap6.txt",
+   "bytes": 7681,
+   "sha256": "ee8a4a3cec50bde1b8544ba8d2908b0e00266b32630fa0ed2a04ef363656a784",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap7.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap7.txt",
+   "bytes": 9531,
+   "sha256": "d2014b2f271bf06852e6f52f1063a93e16952ffd707e21383af1e77555d6c059",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap8.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap8.txt",
+   "bytes": 11123,
+   "sha256": "6accdf67435fd37dbe9443412a3adaa7cf23845791868f98e1c36725ca05e3cd",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gap9.txt",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap9.txt",
+   "bytes": 9046,
+   "sha256": "7f5f062592237ed267ba156d5f92c65b3913ade6b7e090b6ed9d98c606428294",
+   "kind": "data"
+  },
+  {
+   "source": "orlib_gap",
+   "file": "gapinfo.html",
+   "url": "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/gapinfo.html",
+   "bytes": 4185,
+   "sha256": "6cc31c6d883942a062f8dda84e1d8833f52637796e5ea246d981cb8014430cb2",
    "kind": "page"
   },
   {

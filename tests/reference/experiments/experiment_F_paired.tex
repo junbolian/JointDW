@@ -1,0 +1,22 @@
+% Experiment F: paired differences, JointDW (original presentation) minus each baseline and the five-dual lookahead minus GCG's detector. Columns: method; baseline; class; instances scored against the bound-optimal set; difference in hit@1 against the bound-optimal set; instances with every run; difference in hit@1 against the time-optimal set, strict and within 10 percent; time ratio of the two sets (geometric mean $\pm$ the SE of the mean log ratio times the geometric mean). Mean $\pm$ standard error (two-stage bootstrap: prompt groups, then instances within them; asterisk: 95 percent interval excludes 0). Sources: results/experiment_F/paired.csv, paired_time_truth.csv.
+JointDW, GPT-6.1 Sol & Lookahead, HiGHS dual & Generalized assignment & 60 & $-$0.02 $\pm$ 0.06 & 60 & $-$0.02 $\pm$ 0.06 & $-$0.02 $\pm$ 0.06 & 0.99 $\pm$ 0.01 \\
+JointDW, GPT-6.1 Sol & Lookahead, five duals & Generalized assignment & 60 & $-$0.06 $\pm$ 0.05 & 60 & $-$0.06 $\pm$ 0.05 & $-$0.06 $\pm$ 0.05 & 1.00 $\pm$ 0.00 \\
+JointDW, GPT-6.1 Sol & GCG's detector & Generalized assignment & 60 & $-$0.06 $\pm$ 0.05 & 60 & $-$0.06 $\pm$ 0.05 & $-$0.06 $\pm$ 0.05 & 1.01 $\pm$ 0.02 \\
+JointDW, Claude Sonnet 5.5 & Lookahead, HiGHS dual & Generalized assignment & 60 & $-$0.22 $\pm$ 0.06$^{*}$ & 60 & $-$0.22 $\pm$ 0.06$^{*}$ & $-$0.22 $\pm$ 0.06$^{*}$ & 0.98 $\pm$ 0.01 \\
+JointDW, Claude Sonnet 5.5 & Lookahead, five duals & Generalized assignment & 60 & $-$0.25 $\pm$ 0.06$^{*}$ & 60 & $-$0.25 $\pm$ 0.06$^{*}$ & $-$0.25 $\pm$ 0.06$^{*}$ & 0.99 $\pm$ 0.01 \\
+JointDW, Claude Sonnet 5.5 & GCG's detector & Generalized assignment & 60 & $-$0.25 $\pm$ 0.06$^{*}$ & 60 & $-$0.25 $\pm$ 0.06$^{*}$ & $-$0.25 $\pm$ 0.06$^{*}$ & 1.00 $\pm$ 0.02 \\
+Lookahead, five duals & GCG's detector & Generalized assignment & 60 & 0.00 $\pm$ 0.00 & 60 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 1.01 $\pm$ 0.02 \\
+JointDW, GPT-6.1 Sol & Lookahead, HiGHS dual & Bin packing & 12 & 1.00 $\pm$ 0.00$^{*}$ & 16 & 1.00 $\pm$ 0.00$^{*}$ & 1.00 $\pm$ 0.00$^{*}$ & 0.01 $\pm$ 0.00$^{*}$ \\
+JointDW, GPT-6.1 Sol & Lookahead, five duals & Bin packing & 12 & 1.00 $\pm$ 0.00$^{*}$ & 16 & 1.00 $\pm$ 0.00$^{*}$ & 1.00 $\pm$ 0.00$^{*}$ & 0.01 $\pm$ 0.00$^{*}$ \\
+JointDW, GPT-6.1 Sol & GCG's detector & Bin packing & 12 & 1.00 $\pm$ 0.00$^{*}$ & 16 & 1.00 $\pm$ 0.00$^{*}$ & 1.00 $\pm$ 0.00$^{*}$ & 0.44 $\pm$ 0.15$^{*}$ \\
+JointDW, Claude Sonnet 5.5 & Lookahead, HiGHS dual & Bin packing & 12 & 0.92 $\pm$ 0.09$^{*}$ & 16 & 0.77 $\pm$ 0.16$^{*}$ & 0.77 $\pm$ 0.16$^{*}$ & 0.03 $\pm$ 0.02$^{*}$ \\
+JointDW, Claude Sonnet 5.5 & Lookahead, five duals & Bin packing & 12 & 0.92 $\pm$ 0.09$^{*}$ & 16 & 0.77 $\pm$ 0.16$^{*}$ & 0.77 $\pm$ 0.16$^{*}$ & 0.03 $\pm$ 0.02$^{*}$ \\
+JointDW, Claude Sonnet 5.5 & GCG's detector & Bin packing & 12 & 0.92 $\pm$ 0.09$^{*}$ & 16 & 0.77 $\pm$ 0.16$^{*}$ & 0.77 $\pm$ 0.16$^{*}$ & 1.22 $\pm$ 0.90 \\
+Lookahead, five duals & GCG's detector & Bin packing & 12 & 0.00 $\pm$ 0.00 & 16 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 37.53 $\pm$ 12.13$^{*}$ \\
+JointDW, GPT-6.1 Sol & Lookahead, HiGHS dual & All classes & 72 & 0.15 $\pm$ 0.11 & 76 & 0.19 $\pm$ 0.11 & 0.19 $\pm$ 0.11 & 0.38 $\pm$ 0.17$^{*}$ \\
+JointDW, GPT-6.1 Sol & Lookahead, five duals & All classes & 72 & 0.12 $\pm$ 0.11 & 76 & 0.17 $\pm$ 0.11 & 0.17 $\pm$ 0.11 & 0.38 $\pm$ 0.18$^{*}$ \\
+JointDW, GPT-6.1 Sol & GCG's detector & All classes & 72 & 0.12 $\pm$ 0.11 & 76 & 0.17 $\pm$ 0.11 & 0.17 $\pm$ 0.11 & 0.84 $\pm$ 0.09$^{*}$ \\
+JointDW, Claude Sonnet 5.5 & Lookahead, HiGHS dual & All classes & 72 & $-$0.03 $\pm$ 0.13 & 76 & $-$0.01 $\pm$ 0.12 & $-$0.01 $\pm$ 0.12 & 0.48 $\pm$ 0.19$^{*}$ \\
+JointDW, Claude Sonnet 5.5 & Lookahead, five duals & All classes & 72 & $-$0.06 $\pm$ 0.13 & 76 & $-$0.04 $\pm$ 0.12 & $-$0.04 $\pm$ 0.12 & 0.48 $\pm$ 0.19$^{*}$ \\
+JointDW, Claude Sonnet 5.5 & GCG's detector & All classes & 72 & $-$0.06 $\pm$ 0.13 & 76 & $-$0.04 $\pm$ 0.12 & $-$0.04 $\pm$ 0.12 & 1.04 $\pm$ 0.14 \\
+Lookahead, five duals & GCG's detector & All classes & 72 & 0.00 $\pm$ 0.00 & 76 & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & 2.16 $\pm$ 0.81$^{*}$ \\

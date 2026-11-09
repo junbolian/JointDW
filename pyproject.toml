@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llmdw"
-version = "1.1.0"
+version = "1.2.0"
 description = "Zero-marginal groups in Dantzig-Wolfe reformulation: exact gains, the lookahead, JointDW and language-model predictions"
 readme = "README.md"
 license = "MIT"

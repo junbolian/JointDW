@@ -10,6 +10,8 @@ Sources (fixed before any instance is built):
   orlib_cap         OR-Library capacitated warehouse location, cap41 to cap134 (Beasley)
   lotsizelib_ampl   AMPL copies of four LOTSIZELIB Trigeiro instances (tr6_15, tr6_30, tr12_30, tr24_30), used only to
                     check the suerie.de data value by value
+  orlib_gap         OR-Library generalized assignment, gap1 to gap12, and gapinfo.html (the published optima)
+  orlib_binpack     OR-Library bin packing, binpack1, and binpackinfo.html
 
 Every file is written under <out>/<source>/ and listed in <out>/sources.json with URL, bytes, SHA-256 and the time of
 the download. A file already present with the recorded SHA-256 is not downloaded again.
@@ -45,6 +47,10 @@ FIXED = {
     "lotsizelib_ampl": [f"https://www.dcc.fc.up.pt/~jpp/lsize/INSTANCES/{n}" for n in
                         ("tr6_15.dat", "tr6_15.mod", "tr6_30.dat", "tr6_30.mod", "tr12_30.dat", "tr12_30.mod",
                          "tr24_30.dat", "tr24_30.mod", "trigeiro.mod")],
+    "orlib_gap": ["https://people.brunel.ac.uk/~mastjjb/jeb/orlib/gapinfo.html"]
+                 + [f"https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/gap{g}.txt" for g in range(1, 13)],
+    "orlib_binpack": ["https://people.brunel.ac.uk/~mastjjb/jeb/orlib/binpackinfo.html",
+                      "https://people.brunel.ac.uk/~mastjjb/jeb/orlib/files/binpack1.txt"],
 }
 PAGE_NAMES = {"https://commalab.di.unipi.it/datasets/mmcf/": "mmcf_page.html"}
 
@@ -74,7 +80,7 @@ def main(argv=None) -> int:
     man_path = out / "sources.json"
     manifest = json.loads(man_path.read_text()) if man_path.exists() else {"files": []}
     have = {(f["source"], f["file"]): f for f in manifest["files"]}
-    todo = [(s, u) for s, urls in FIXED.items() for u in urls]
+    pending = [(s, u) for s, urls in FIXED.items() for u in urls]
     test = out / "trigeiro_gcg" / "ls-trigeiro.test"
 
     def one(source, url):
@@ -93,7 +99,7 @@ def main(argv=None) -> int:
         return rec
 
     try:
-        for s, u in todo:
+        for s, u in pending:
             one(s, u)
     finally:
         manifest = {"gcg_commit": GCG_COMMIT, "files": sorted(have.values(), key=lambda f: (f["source"], f["file"]))}

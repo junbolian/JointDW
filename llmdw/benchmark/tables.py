@@ -25,15 +25,17 @@ over its samples before the bootstrap; the solved count of a language model is t
 its samples that were solved, and its count of instances with gain 0 is the sum over instances of the share of its
 samples whose set has gain 0.
 
-Comparisons (paired over instances, cluster bootstrap over prompt groups, llmdw.scoring.cluster, 10,000 resamples, seed
-0; asterisk when the 95% interval excludes 0):
+Comparisons (paired over instances, two-stage bootstrap: prompt groups, then instances within each drawn group,
+llmdw.scoring.cluster, 10,000 resamples, seed 0; asterisk when the 95% percentile interval excludes 0):
   JointDW (each model) minus the single-dual lookahead, the five-dual lookahead and GCG default: time difference (s);
   JointDW (each model) minus the single-dual lookahead, the five-dual lookahead and GCG default, and the five-dual
   lookahead minus GCG default: hit@1 and the gain of the first set (benchmark_paired_hit1.csv, benchmark_paired_gain.csv);
   each method against the true best set: the paired time ratio (t + 1 s) / (t_best + 1 s), reported as the geometric
-  mean over instances (exp of the mean log ratio; interval and asterisk on the mean log ratio, standard error of the
-  mean log ratio), and the paired gap difference (gap minus gap of the true best set).
-Rows per class and for all classes pooled ("all").
+  mean over instances (exp of the mean log ratio) with the standard error of the mean log ratio multiplied by the
+  geometric mean (ratio_se; asterisk when the interval of the mean log ratio excludes 0), and the paired gap difference
+  (gap minus gap of the true best set).
+Rows per class and for all classes pooled ("all"); every row records its instances (n_instances) and the prompt groups
+among them (n_groups).
 
 Usage
 -----
@@ -76,14 +78,20 @@ def _row_or_error(root: Path, name: str, T) -> dict:
         raise FileNotFoundError(f"{name}: no branch-and-price row for {key}")
     if not json.loads(first.read_text())["ok"] and not (d / f"{tag}.s1.row.json").exists():
         raise FileNotFoundError(f"{name}: failed run of {key} without its seed-1 repeat")
-    return bnp.run_one((str(root), name, T))      # every row exists: run_one only reads
+    from llmdw.benchmark import validity
+
+    o = validity.oracle_with_reference(root / "instances" / name)
+    # every row exists: run_one only reads; the run as scored under the validity rule (llmdw.benchmark.validity)
+    return validity.apply(bnp.run_one((str(root), name, T)), o, validity.verdicts(root, name))
 
 
 def instance_values(root: Path, name: str, configs: list, plan_files=("bnp_plan.json",)) -> dict:
     """plan_files: the first gives the methods without samples and its configurations; each further file adds the
     configurations of configs that the earlier files do not hold (bnp_plan_data.json: the data variant)."""
+    from llmdw.benchmark import validity
+
     d = root / "instances" / name
-    o = json.loads((d / "oracle.json").read_text())
+    o = validity.oracle_with_reference(d)            # z*: llmdw.benchmark.validity
     p = json.loads((d / plan_files[0]).read_text())
     for extra in plan_files[1:]:
         q = json.loads((d / extra).read_text())
@@ -103,7 +111,9 @@ def instance_values(root: Path, name: str, configs: list, plan_files=("bnp_plan.
         gains[T] = ((r["dual_bound"] - lp) / scale) if (scale > 0 and r.get("dual_bound") is not None
                                                          and r.get("status") != "failed"
                                                          and not r.get("bound_invalid")) else None
-    ties = {bnp.set_key(T) for T in p["methods"]["true_best_ties"]}
+    best_key, ties = validity.bound_optimal(o)       # recomputed under z*; equals the plan unless z* changed
+    ties = set(ties)
+    p["methods"]["true_best"] = best_key.split("|")
     jobs = {(bnp.set_key(T) if T != "gcg_default" else T): T for pf in plan_files for _, _, T in bnp.jobs_of(root, name, pf)}
     runs = {r["set"]: r for r in (_row_or_error(root, name, T) for T in jobs.values())}
 
@@ -161,15 +171,17 @@ def per_instance(v: dict, m: str) -> dict:
 def _se(values: dict) -> dict:
     vals = {n: x for n, x in values.items() if x is not None}
     lo, hi, se = results.boot_ci_se(vals) if vals else (None, None, None)
-    return {"mean": _mean(vals.values()), "se": se, "lo": lo, "hi": hi, "n": len(vals)}
+    return {"mean": _mean(vals.values()), "se": se, "lo": lo, "hi": hi, "n": len(vals),
+            "groups": cluster.n_groups(vals)}
 
 
 def _paired(a: dict, b: dict) -> dict:
     both = sorted(n for n in a if a[n] is not None and b.get(n) is not None)
     diffs = {n: a[n] - b[n] for n in both}
     lo, hi, se = results.boot_ci_se(diffs) if diffs else (None, None, None)
-    return {"n_instances": len(both), "mean_a": _mean(a[n] for n in both), "mean_b": _mean(b[n] for n in both),
-            "mean_difference": _mean(diffs.values()), "se_difference": se, "lo": lo, "hi": hi,
+    return {"n_instances": len(both), "n_groups": cluster.n_groups(both), "mean_a": _mean(a[n] for n in both),
+            "mean_b": _mean(b[n] for n in both), "mean_difference": _mean(diffs.values()), "se_difference": se,
+            "lo": lo, "hi": hi,
             "asterisk": "*" if lo is not None and (lo > 0 or hi < 0) else ""}
 
 
@@ -178,7 +190,9 @@ def _ratio(a: dict, b: dict) -> dict:
     logs = {n: math.log((a[n] + TIME_SHIFT) / (b[n] + TIME_SHIFT)) for n in both}
     lo, hi, se = results.boot_ci_se(logs) if logs else (None, None, None)
     m = _mean(logs.values())
-    return {"n_instances": len(both), "geometric_mean_ratio": math.exp(m) if m is not None else None,
+    g = math.exp(m) if m is not None else None
+    return {"n_instances": len(both), "n_groups": cluster.n_groups(both), "geometric_mean_ratio": g,
+            "ratio_se": g * se if g is not None and se is not None else None,
             "ratio_lo": math.exp(lo) if lo is not None else None, "ratio_hi": math.exp(hi) if hi is not None else None,
             "mean_log_ratio": m, "se_log_ratio": se,
             "asterisk": "*" if lo is not None and (lo > 0 or hi < 0) else ""}
@@ -194,15 +208,16 @@ def tables(vals: dict, configs: list) -> dict:
         if not names:
             continue
         z = [vals[n]["zero_marginal_group"] for n in names]
-        out["zero_marginal"].append({"class": cls, "n_instances": len(names), "with_zero_marginal_group": sum(z),
+        out["zero_marginal"].append({"class": cls, "n_instances": len(names), "n_groups": cluster.n_groups(names),
+                                     "with_zero_marginal_group": sum(z),
                                      "share": sum(z) / len(z),
                                      "certain": sum(vals[n]["classification"] == "certain" for n in names),
                                      "possible": sum(vals[n]["classification"] == "possible" for n in names)})
         for m in methods:
-            row = {"class": cls, "method": m, "n_instances": len(names)}
+            row = {"class": cls, "method": m, "n_instances": len(names), "n_groups": cluster.n_groups(names)}
             for k in ("hit", "gain", "time", "gap"):
                 s = _se({n: pi[n][m][k] for n in names})
-                row.update({f"{k}_mean": s["mean"], f"{k}_se": s["se"], f"{k}_n": s["n"]})
+                row.update({f"{k}_mean": s["mean"], f"{k}_se": s["se"], f"{k}_n": s["n"], f"{k}_groups": s["groups"]})
             row["gain_zero_instances"] = sum(pi[n][m]["gain_zero"] or 0.0 for n in names
                                              if pi[n][m]["gain_zero"] is not None)
             row["solved"] = sum(pi[n][m]["solved"] for n in names if pi[n][m]["solved"] is not None)
@@ -262,8 +277,9 @@ def report(vals: dict, tabs: dict, configs: list, first_batch: list, selection: 
     L += ["", "## Instances", ""]
     for cls in CLASSES:
         names = [n for n, v in vals.items() if v["class"] == cls]
-        L.append(f"- {cls}: {len(names)} instances, {sum(vals[n]['proved_optimal'] for n in names)} with a proved "
-                 f"optimum; without a proved optimum: "
+        g = cluster.n_groups(names)
+        L.append(f"- {cls}: {len(names)} instances, {g} prompt group{'' if g == 1 else 's'}, "
+                 f"{sum(vals[n]['proved_optimal'] for n in names)} with a proved optimum; without a proved optimum: "
                  f"{' '.join(n for n in names if not vals[n]['proved_optimal']) or 'none'}")
     if selection:
         L += ["", "Exclusions at selection (selection.json):", ""]
@@ -278,34 +294,36 @@ def report(vals: dict, tabs: dict, configs: list, first_batch: list, selection: 
           "were parsed before the answer-name rule; re-read with the rule, every joint support and every "
           "anchor is unchanged (only candidate lists of ten answers of Claude Sonnet 5.5 change), so no number here "
           "depends on it.", ""]
-    L += ["## Zero-marginal groups at the empty set", "", "| class | instances | with group | share | certain | possible |",
-          "|---|---|---|---|---|---|"]
+    L += ["## Zero-marginal groups at the empty set", "",
+          "| class | instances | prompt groups | with group | share | certain | possible |", "|---|---|---|---|---|---|---|"]
     for r in tabs["zero_marginal"]:
-        L.append(f"| {r['class']} | {r['n_instances']} | {r['with_zero_marginal_group']} | {_f(r['share'])} | "
+        L.append(f"| {r['class']} | {r['n_instances']} | {r['n_groups']} | {r['with_zero_marginal_group']} | {_f(r['share'])} | "
                  f"{r['certain']} | {r['possible']} |")
     L += ["", "## Methods: hit@1, gain of the first set, branch-and-price", "",
-          "| class | method | hit@1 | gain (share of LP gap) | gain 0 (instances) | time (s) | final gap | solved | "
-          "failed twice |", "|---|---|---|---|---|---|---|---|---|"]
+          "| class | method | instances | prompt groups | hit@1 | gain (share of LP gap) | gain 0 (instances) | time (s) | "
+          "final gap | solved | failed twice |", "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in tabs["methods"]:
-        L.append(f"| {r['class']} | {r['method']} | {_f(r['hit_mean'])} ± {_f(r['hit_se'])} | "
+        L.append(f"| {r['class']} | {r['method']} | {r['n_instances']} | {r['n_groups']} | "
+                 f"{_f(r['hit_mean'])} ± {_f(r['hit_se'])} | "
                  f"{_f(r['gain_mean'])} ± {_f(r['gain_se'])} | {_f(r['gain_zero_instances'], 2)} | "
                  f"{_f(r['time_mean'], 1)} ± {_f(r['time_se'], 1)} | {_f(r['gap_mean'], 5)} ± {_f(r['gap_se'], 5)} | "
-                 f"{_f(r['solved'], 2)}/{r['n_instances']} | {r['n_failed_twice']} {r['failed_twice_instances']} |")
+                 f"{_f(r['solved'], 2)} | {r['n_failed_twice']} {r['failed_twice_instances']} |")
     L += ["", "## JointDW against the baselines: paired time difference (s)", "",
-          "| class | configuration | against | n | mean JointDW | mean baseline | difference ± SE | 95% interval | "
+          "| class | configuration | against | n | prompt groups | mean JointDW | mean baseline | difference ± SE | "
           "failed twice |", "|---|---|---|---|---|---|---|---|---|"]
     for r in tabs["paired_jointdw"]:
-        L.append(f"| {r['class']} | {r['configuration']} | {r['against']} | {r['n_instances']} | {_f(r['mean_a'], 1)} | "
-                 f"{_f(r['mean_b'], 1)} | {_f(r['mean_difference'], 1)} ± {_f(r['se_difference'], 1)}{r['asterisk']} | "
-                 f"[{_f(r['lo'], 1)}, {_f(r['hi'], 1)}] | {r['failed_twice_instances']} |")
+        L.append(f"| {r['class']} | {r['configuration']} | {r['against']} | {r['n_instances']} | {r['n_groups']} | "
+                 f"{_f(r['mean_a'], 1)} | {_f(r['mean_b'], 1)} | "
+                 f"{_f(r['mean_difference'], 1)} ± {_f(r['se_difference'], 1)}{r['asterisk']} | "
+                 f"{r['failed_twice_instances']} |")
     L += ["", "## Each method against the true best set", "",
-          "| class | method | n | time ratio (geometric mean) | 95% interval | SE of mean log ratio | "
-          "gap difference ± SE | 95% interval | failed twice |", "|---|---|---|---|---|---|---|---|---|"]
+          "| class | method | n | prompt groups | time ratio (geometric mean) ± SE | SE of mean log ratio | "
+          "gap difference ± SE | failed twice |", "|---|---|---|---|---|---|---|---|"]
     for r in tabs["paired_true_best"]:
-        L.append(f"| {r['class']} | {r['method']} | {r['n_instances']} | {_f(r['geometric_mean_ratio'])}{r['asterisk']} | "
-                 f"[{_f(r['ratio_lo'])}, {_f(r['ratio_hi'])}] | {_f(r['se_log_ratio'])} | "
+        L.append(f"| {r['class']} | {r['method']} | {r['n_instances']} | {r['n_groups']} | "
+                 f"{_f(r['geometric_mean_ratio'])} ± {_f(r['ratio_se'])}{r['asterisk']} | {_f(r['se_log_ratio'])} | "
                  f"{_f(r['gap_mean_difference'], 5)} ± {_f(r['gap_se_difference'], 5)}{r['gap_asterisk']} | "
-                 f"[{_f(r['gap_lo'], 5)}, {_f(r['gap_hi'], 5)}] | {r['failed_twice_instances']} |")
+                 f"{r['failed_twice_instances']} |")
     fails = [(n, k, r) for n, v in sorted(vals.items()) for k, r in v["runs"].items() if r.get("failed_twice")]
     retried = [(n, k, r) for n, v in sorted(vals.items()) for k, r in v["runs"].items() if r.get("retried_after_failure")]
     L += ["", "## Branch-and-price runs that failed", ""]

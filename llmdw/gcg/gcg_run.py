@@ -56,7 +56,7 @@ import sys
 import time
 from pathlib import Path
 
-from llmdw.gcg import memory_budget
+from llmdw.gcg import memory_budget, solver_slots
 
 MODES = ("dw-given", "dw-auto", "gcg-default", "scip", "gurobi", "lp")
 BOUND_MODES = ("dw-given", "dw-auto")
@@ -203,9 +203,27 @@ def _child_gcg(args) -> dict:
     m.optimize()
     m.printStatistics()
     out.update(_collect(m))
+    if getattr(args, "write_sol", None):
+        out["solution_file"] = _write_best_solution(m, args.write_sol)
     out["propagation"] = {"setting": args.propagation, "original": _propagation_values(m),
                           "master": _propagation_values(m.getMasterProb())}
     return out
+
+
+def _write_best_solution(m, path: str):
+    """The best solution of the original problem as JSON {"objective", "values": {variable: value}} (nonzero values
+    only); None when the solve has no solution. Used by the feasibility check of a solution better than the reference
+    optimum (llmdw.benchmark.validity)."""
+    if m.getNSols() == 0:
+        return None
+    sol = m.getBestSol()
+    vals = {}
+    for v in m.getVars():
+        x = m.getSolVal(sol, v)
+        if x != 0.0:
+            vals[v.name] = x
+    write_json_atomic(path, {"objective": m.getSolObjVal(sol), "values": vals})
+    return path
 
 
 def _child_scip(args) -> dict:
@@ -229,6 +247,8 @@ def _child_scip(args) -> dict:
         if args.propagation == "off":
             _propagation_off(m)
     m.optimize()
+    if args.mode == "scip":
+        m.printStatistics()                      # into the log, as for the GCG modes
     out = _collect(m)
     # lp: unchanged SCIP defaults (a pure LP, propagation cannot change its value); the values are recorded only
     out["propagation"] = {"setting": "default" if args.mode == "lp" else args.propagation,
@@ -375,7 +395,7 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
         names: bool = False,
         time_limit: float | None = None, seed: int = 0, write_chosen: str | None = None,
         log_path: str | None = None, margin: float = 120.0, propagation: str | None = None,
-        memory_gb: float | None = None) -> dict:
+        memory_gb: float | None = None, write_sol: str | None = None) -> dict:
     """Run one solve in a child process (isolates crashes) and return the parsed result.
 
     propagation: "off" (bound evaluations; the default of dw-given and dw-auto) or "default" (SCIP defaults; the default
@@ -383,7 +403,8 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
     memory_gb: address-space cap of this child (llmdw.gcg.address_limit) and SCIP's memory limit (0.8 of it); default
     LLMDW_CHILD_MEMORY_GB. The child waits for its share of the memory budget (llmdw.gcg.memory_budget) before its
     clock starts. The result records start and end time and the available memory at both, and is written atomically
-    (temporary file, then rename)."""
+    (temporary file, then rename).
+    write_sol: GCG modes only; the best solution of the original problem is written there (_write_best_solution)."""
     if mode not in MODES:
         raise ValueError(mode)
     if propagation is None:
@@ -412,6 +433,8 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
         cmd += ["--time", str(time_limit)]
     if write_chosen:
         cmd += ["--write-chosen", write_chosen]
+    if write_sol:
+        cmd += ["--write-sol", write_sol]
     cap_gb = str(memory_gb) if memory_gb else os.environ.get("LLMDW_CHILD_MEMORY_GB")
     if cap_gb:
         # hard address-space cap per solve, so one large decomposition cannot exhaust the machine
@@ -427,17 +450,23 @@ def run(mode: str, mps: str, out_json: str, *, dec: str | None = None, root: boo
     # shared memory budget (llmdw.gcg.memory_budget): the wait comes before the clock of wall_limit starts
     with memory_budget.reserve(float(cap_gb) if cap_gb else None, key=mps) as budget_wait:
         _wait_for_memory()
-        t0 = time.time()
-        clock = {"started_at": _now(), "mem_available_gb_start": memory_budget.mem_available_gb()}
         Path(out_json).unlink(missing_ok=True)  # a result file of another run is never read
-        try:
-            with open(log_path, "w", encoding="utf-8") as log:
-                proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, timeout=wall_limit, env=env)
-            code = proc.returncode
-        except subprocess.TimeoutExpired:
-            code = "killed"
+        with open(log_path, "w", encoding="utf-8") as log:
+            # cap on active solver processes (llmdw.gcg.solver_slots): the child starts under the lock
+            with solver_slots.slot() as slot_wait:
+                t0 = time.time()
+                clock = {"started_at": _now(), "mem_available_gb_start": memory_budget.mem_available_gb(),
+                         "load1_start": solver_slots.load1(), "solver_processes_start": solver_slots.active()}
+                proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env)
+            try:
+                code = proc.wait(timeout=None if wall_limit is None else max(0.0, wall_limit - (time.time() - t0)))
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
+                code = "killed"
         clock.update({"ended_at": _now(), "mem_available_gb_end": memory_budget.mem_available_gb(),
-                      "budget_wait_seconds": round(budget_wait, 3)})
+                      "load1_end": solver_slots.load1(), "budget_wait_seconds": round(budget_wait, 3),
+                      "slot_wait_seconds": slot_wait})
     res = {}
     if os.path.exists(out_json):
         with open(out_json, encoding="utf-8") as fh:
@@ -506,13 +535,14 @@ def main(argv=None) -> int:
     ap.add_argument("--time", type=float)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--write-chosen")
+    ap.add_argument("--write-sol", help="GCG modes: write the best solution of the original problem (JSON)")
     ap.add_argument("--child", action="store_true", help=argparse.SUPPRESS)
     args = ap.parse_args(argv)
     if args.child:
         return _child_main(args)
     res = run(args.mode, args.mps, args.out, dec=args.dec, root=args.root, no_cuts=args.no_cuts, no_round=args.no_round, no_heur=args.no_heur,
               score=args.score, names=args.names, time_limit=args.time, seed=args.seed,
-              write_chosen=args.write_chosen, propagation=args.propagation)
+              write_chosen=args.write_chosen, propagation=args.propagation, write_sol=args.write_sol)
     print(json.dumps({k: res.get(k) for k in ("ok", "status", "dual_bound", "primal_bound", "solving_time",
                                               "blocks", "pricing_seconds", "error")}))
     return 0

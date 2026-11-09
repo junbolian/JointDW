@@ -1,0 +1,161 @@
+% Experiment E: paired differences in evaluations until a best set. Columns: order; minus the five-dual lookahead order at s = 2, s = 3; minus the covering order at s = 2, s = 3 (mean $\pm$ standard error, two-stage bootstrap over prompt groups and instances; asterisk: 95 percent interval excludes 0; n.c.: not computed; a pooled row leaves the instances not computed out). Sources: results/experiment_E/paired_five_dual.csv, paired_covering.csv
+\multicolumn{5}{@{}l}{\emph{Lot sizing, $k=12$}} \\
+covering & 32.65 $\pm$ 0.14$^{*}$ & 58.45 $\pm$ 16.43$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 0.00 $\pm$ 0.00 & 0.00 $\pm$ 0.00 & $-$32.65 $\pm$ 0.14$^{*}$ & $-$58.45 $\pm$ 16.43$^{*}$ \\
+lookahead, five duals & -- & -- & $-$32.65 $\pm$ 0.14$^{*}$ & $-$58.45 $\pm$ 16.43$^{*}$ \\
+GCG anchor (SPFWH score) & 34.04 $\pm$ 0.16$^{*}$ & 72.48 $\pm$ 24.55$^{*}$ & 1.13 $\pm$ 0.05$^{*}$ & 6.53 $\pm$ 2.99$^{*}$ \\
+GCG anchor (SPFWH score, names) & 33.72 $\pm$ 0.21$^{*}$ & 78.11 $\pm$ 20.90$^{*}$ & 1.05 $\pm$ 0.11$^{*}$ & 7.05 $\pm$ 2.64$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 10.25 $\pm$ 2.84$^{*}$ & 17.82 $\pm$ 6.97$^{*}$ & $-$22.40 $\pm$ 2.79$^{*}$ & $-$40.63 $\pm$ 13.12$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 5.40 $\pm$ 1.62$^{*}$ & 8.09 $\pm$ 2.59$^{*}$ & $-$27.25 $\pm$ 1.67$^{*}$ & $-$50.36 $\pm$ 12.96$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 20.43 $\pm$ 4.21$^{*}$ & 35.78 $\pm$ 12.33$^{*}$ & $-$12.23 $\pm$ 4.16$^{*}$ & $-$22.67 $\pm$ 14.33$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW & 0.00 $\pm$ 0.00 & 4.65 $\pm$ 1.49$^{*}$ & $-$32.65 $\pm$ 0.15$^{*}$ & $-$53.80 $\pm$ 13.26$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & 0.47 $\pm$ 0.10$^{*}$ & 0.70 $\pm$ 0.19$^{*}$ & $-$32.19 $\pm$ 0.12$^{*}$ & $-$57.75 $\pm$ 16.28$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & 0.22 $\pm$ 0.06$^{*}$ & 0.63 $\pm$ 0.20$^{*}$ & $-$32.43 $\pm$ 0.17$^{*}$ & $-$57.82 $\pm$ 14.56$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & 0.69 $\pm$ 0.14$^{*}$ & 0.90 $\pm$ 0.13$^{*}$ & $-$31.97 $\pm$ 0.16$^{*}$ & $-$57.55 $\pm$ 16.35$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & 0.00 $\pm$ 0.00 & 0.60 $\pm$ 0.21$^{*}$ & $-$32.65 $\pm$ 0.15$^{*}$ & $-$57.85 $\pm$ 14.55$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Lot sizing, $k=16$}} \\
+covering & 59.26 $\pm$ 0.55$^{*}$ & 76.93 $\pm$ 22.98$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 7.46 $\pm$ 9.91 & 0.00 $\pm$ 0.00 & $-$51.80 $\pm$ 10.34$^{*}$ & $-$76.93 $\pm$ 22.98$^{*}$ \\
+lookahead, five duals & -- & -- & $-$59.26 $\pm$ 0.55$^{*}$ & $-$76.93 $\pm$ 22.98$^{*}$ \\
+GCG anchor (SPFWH score) & 60.04 $\pm$ 0.54$^{*}$ & 89.27 $\pm$ 21.10$^{*}$ & 0.78 $\pm$ 0.07$^{*}$ & 12.34 $\pm$ 2.82$^{*}$ \\
+GCG anchor (SPFWH score, names) & 60.04 $\pm$ 0.54$^{*}$ & 89.27 $\pm$ 21.10$^{*}$ & 0.78 $\pm$ 0.07$^{*}$ & 12.34 $\pm$ 2.82$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 20.41 $\pm$ 1.79$^{*}$ & 22.50 $\pm$ 8.21$^{*}$ & $-$38.85 $\pm$ 1.77$^{*}$ & $-$54.43 $\pm$ 17.24$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 10.37 $\pm$ 2.58$^{*}$ & 15.79 $\pm$ 7.10$^{*}$ & $-$48.89 $\pm$ 2.48$^{*}$ & $-$61.14 $\pm$ 17.76$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 48.42 $\pm$ 3.67$^{*}$ & 61.32 $\pm$ 14.61$^{*}$ & $-$10.83 $\pm$ 3.29$^{*}$ & $-$15.61 $\pm$ 8.90 \\
+GPT-6.1 Sol, coefficients, JointDW & $-$0.10 $\pm$ 0.10 & 2.37 $\pm$ 0.92$^{*}$ & $-$59.36 $\pm$ 0.29$^{*}$ & $-$74.56 $\pm$ 20.80$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & 0.61 $\pm$ 0.05$^{*}$ & 0.83 $\pm$ 0.26$^{*}$ & $-$58.65 $\pm$ 0.53$^{*}$ & $-$76.10 $\pm$ 22.73$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & 0.22 $\pm$ 0.07$^{*}$ & 0.76 $\pm$ 0.27$^{*}$ & $-$59.04 $\pm$ 0.31$^{*}$ & $-$76.17 $\pm$ 21.45$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & 0.88 $\pm$ 0.05$^{*}$ & 1.12 $\pm$ 0.17$^{*}$ & $-$58.38 $\pm$ 0.53$^{*}$ & $-$75.81 $\pm$ 22.83$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$0.10 $\pm$ 0.10 & 0.70 $\pm$ 0.28$^{*}$ & $-$59.36 $\pm$ 0.29$^{*}$ & $-$76.23 $\pm$ 21.44$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Network design, $k=12$}} \\
+covering & 16.85 $\pm$ 5.48$^{*}$ & 31.92 $\pm$ 11.53$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 15.65 $\pm$ 6.61$^{*}$ & 16.32 $\pm$ 17.29 & $-$1.21 $\pm$ 5.74 & $-$15.60 $\pm$ 14.11 \\
+lookahead, five duals & -- & -- & $-$16.85 $\pm$ 5.48$^{*}$ & $-$31.92 $\pm$ 11.53$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 6.66 $\pm$ 4.91 & 9.99 $\pm$ 3.35$^{*}$ & $-$10.19 $\pm$ 1.51$^{*}$ & $-$21.93 $\pm$ 9.74$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 5.03 $\pm$ 5.22 & 8.35 $\pm$ 2.38$^{*}$ & $-$11.82 $\pm$ 1.95$^{*}$ & $-$23.57 $\pm$ 8.75$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 16.13 $\pm$ 6.19$^{*}$ & 26.49 $\pm$ 5.43$^{*}$ & $-$0.72 $\pm$ 1.90 & $-$5.43 $\pm$ 8.41 \\
+GPT-6.1 Sol, coefficients, JointDW & $-$4.73 $\pm$ 5.69 & 5.91 $\pm$ 3.03$^{*}$ & $-$21.58 $\pm$ 2.62$^{*}$ & $-$26.01 $\pm$ 7.32$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$0.94 $\pm$ 1.45 & 1.24 $\pm$ 0.30$^{*}$ & $-$17.79 $\pm$ 4.16$^{*}$ & $-$30.68 $\pm$ 11.47$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & $-$2.55 $\pm$ 2.50 & 1.18 $\pm$ 0.28$^{*}$ & $-$19.40 $\pm$ 3.24$^{*}$ & $-$30.74 $\pm$ 9.52$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & $-$0.11 $\pm$ 1.21 & 0.94 $\pm$ 0.06$^{*}$ & $-$16.96 $\pm$ 4.80$^{*}$ & $-$30.98 $\pm$ 11.56$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$6.94 $\pm$ 4.58 & 0.56 $\pm$ 0.20$^{*}$ & $-$23.79 $\pm$ 2.33$^{*}$ & $-$31.36 $\pm$ 9.43$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Network design, $k=14$}} \\
+covering & 19.53 $\pm$ 5.95$^{*}$ & n.c. & -- & -- \\
+lookahead, HiGHS dual & 13.65 $\pm$ 6.69 & n.c. & $-$5.88 $\pm$ 7.21 & n.c. \\
+lookahead, five duals & -- & -- & $-$19.53 $\pm$ 5.95$^{*}$ & n.c. \\
+Claude Sonnet 5.5, original, JointDW & 9.24 $\pm$ 5.00 & n.c. & $-$10.29 $\pm$ 2.39$^{*}$ & n.c. \\
+Claude Sonnet 5.5, coefficients, JointDW & 8.46 $\pm$ 4.70 & n.c. & $-$11.07 $\pm$ 2.75$^{*}$ & n.c. \\
+GPT-6.1 Sol, original, JointDW & 18.97 $\pm$ 6.77$^{*}$ & n.c. & $-$0.56 $\pm$ 1.44 & n.c. \\
+GPT-6.1 Sol, coefficients, JointDW & $-$5.44 $\pm$ 7.65 & n.c. & $-$24.96 $\pm$ 2.29$^{*}$ & n.c. \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$0.04 $\pm$ 1.62 & n.c. & $-$19.57 $\pm$ 5.60$^{*}$ & n.c. \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & 0.00 $\pm$ 1.63 & n.c. & $-$19.53 $\pm$ 5.60$^{*}$ & n.c. \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & $-$0.82 $\pm$ 1.14 & n.c. & $-$20.35 $\pm$ 4.93$^{*}$ & n.c. \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$9.62 $\pm$ 6.22 & n.c. & $-$29.15 $\pm$ 2.29$^{*}$ & n.c. \\
+\multicolumn{5}{@{}l}{\emph{Facility location, $k=12$}} \\
+covering & 4.62 $\pm$ 5.27 & 36.50 $\pm$ 13.73$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 13.86 $\pm$ 5.89$^{*}$ & 45.76 $\pm$ 20.77$^{*}$ & 9.23 $\pm$ 1.92$^{*}$ & 9.26 $\pm$ 16.98 \\
+lookahead, five duals & -- & -- & $-$4.62 $\pm$ 5.27 & $-$36.50 $\pm$ 13.73$^{*}$ \\
+GCG anchor (strong score) & 23.75 $\pm$ 0.00$^{*}$ & 85.96 $\pm$ 0.00$^{*}$ & $-$0.08 $\pm$ 0.00$^{*}$ & 0.76 $\pm$ 0.00$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 1.93 $\pm$ 5.18 & 26.98 $\pm$ 9.40$^{*}$ & $-$2.69 $\pm$ 0.72$^{*}$ & $-$9.51 $\pm$ 4.57$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 0.72 $\pm$ 5.23 & 20.65 $\pm$ 8.89$^{*}$ & $-$3.90 $\pm$ 1.37$^{*}$ & $-$15.84 $\pm$ 7.70$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 2.34 $\pm$ 4.86 & 39.48 $\pm$ 14.15$^{*}$ & $-$2.29 $\pm$ 1.01$^{*}$ & 2.98 $\pm$ 1.24$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW & $-$11.67 $\pm$ 5.69 & 8.08 $\pm$ 10.22 & $-$16.29 $\pm$ 3.39$^{*}$ & $-$28.41 $\pm$ 11.71$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$2.41 $\pm$ 1.54 & 0.07 $\pm$ 1.76 & $-$7.03 $\pm$ 4.07 & $-$36.43 $\pm$ 12.71$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & $-$2.77 $\pm$ 1.86 & $-$0.54 $\pm$ 2.18 & $-$7.39 $\pm$ 4.00 & $-$37.04 $\pm$ 12.56$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & $-$1.53 $\pm$ 1.04 & 0.49 $\pm$ 1.42 & $-$6.15 $\pm$ 4.41 & $-$36.00 $\pm$ 12.83$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$11.67 $\pm$ 5.69 & $-$2.42 $\pm$ 3.38 & $-$16.29 $\pm$ 3.39$^{*}$ & $-$38.92 $\pm$ 12.10$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Facility location, $k=16$}} \\
+covering & 27.66 $\pm$ 7.07$^{*}$ & 88.88 $\pm$ 39.07$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 29.42 $\pm$ 9.34$^{*}$ & 36.41 $\pm$ 34.97 & 1.75 $\pm$ 7.50 & $-$52.47 $\pm$ 41.20 \\
+lookahead, five duals & -- & -- & $-$27.66 $\pm$ 7.07$^{*}$ & $-$88.88 $\pm$ 39.07$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 21.87 $\pm$ 7.30$^{*}$ & 60.36 $\pm$ 35.40 & $-$5.79 $\pm$ 3.01$^{*}$ & $-$28.52 $\pm$ 18.90$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 14.93 $\pm$ 4.15$^{*}$ & 31.83 $\pm$ 30.56 & $-$12.74 $\pm$ 3.53$^{*}$ & $-$57.05 $\pm$ 18.20$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 22.07 $\pm$ 6.18$^{*}$ & 83.79 $\pm$ 35.12$^{*}$ & $-$5.59 $\pm$ 1.46$^{*}$ & $-$5.10 $\pm$ 5.67 \\
+GPT-6.1 Sol, coefficients, JointDW & $-$0.34 $\pm$ 5.15 & $-$20.80 $\pm$ 24.69 & $-$28.01 $\pm$ 5.76$^{*}$ & $-$109.68 $\pm$ 24.96$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$0.27 $\pm$ 1.00 & $-$13.87 $\pm$ 14.43 & $-$27.94 $\pm$ 6.37$^{*}$ & $-$102.75 $\pm$ 29.94$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & 0.85 $\pm$ 0.20$^{*}$ & $-$18.76 $\pm$ 18.91 & $-$26.81 $\pm$ 7.09$^{*}$ & $-$107.64 $\pm$ 27.99$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & 0.35 $\pm$ 0.34 & $-$9.19 $\pm$ 9.86 & $-$27.31 $\pm$ 6.78$^{*}$ & $-$98.08 $\pm$ 32.39$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$2.65 $\pm$ 2.61 & $-$24.31 $\pm$ 23.29 & $-$30.31 $\pm$ 5.70$^{*}$ & $-$113.20 $\pm$ 26.72$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Lot sizing, all $k$}} \\
+covering & 45.96 $\pm$ 5.59$^{*}$ & 67.69 $\pm$ 14.51$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 3.73 $\pm$ 4.55 & 0.00 $\pm$ 0.00 & $-$42.23 $\pm$ 6.55$^{*}$ & $-$67.69 $\pm$ 14.51$^{*}$ \\
+lookahead, five duals & -- & -- & $-$45.96 $\pm$ 5.59$^{*}$ & $-$67.69 $\pm$ 14.51$^{*}$ \\
+GCG anchor (SPFWH score) & 51.37 $\pm$ 5.59$^{*}$ & 83.67 $\pm$ 16.42$^{*}$ & 0.90 $\pm$ 0.09$^{*}$ & 10.40 $\pm$ 2.39$^{*}$ \\
+GCG anchor (SPFWH score, names) & 51.27 $\pm$ 4.88$^{*}$ & 85.55 $\pm$ 15.85$^{*}$ & 0.87 $\pm$ 0.08$^{*}$ & 10.58 $\pm$ 2.24$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 15.33 $\pm$ 2.65$^{*}$ & 20.16 $\pm$ 5.52$^{*}$ & $-$30.62 $\pm$ 3.69$^{*}$ & $-$47.53 $\pm$ 10.71$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 7.89 $\pm$ 1.64$^{*}$ & 11.94 $\pm$ 3.88$^{*}$ & $-$38.07 $\pm$ 2.84$^{*}$ & $-$55.75 $\pm$ 11.17$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 34.42 $\pm$ 6.15$^{*}$ & 48.55 $\pm$ 10.10$^{*}$ & $-$11.53 $\pm$ 2.38$^{*}$ & $-$19.14 $\pm$ 7.38$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW & $-$0.05 $\pm$ 0.05 & 3.51 $\pm$ 0.91$^{*}$ & $-$46.01 $\pm$ 2.98$^{*}$ & $-$64.18 $\pm$ 12.67$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & 0.54 $\pm$ 0.06$^{*}$ & 0.76 $\pm$ 0.16$^{*}$ & $-$45.42 $\pm$ 5.56$^{*}$ & $-$66.93 $\pm$ 14.36$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & 0.22 $\pm$ 0.05$^{*}$ & 0.70 $\pm$ 0.17$^{*}$ & $-$45.74 $\pm$ 2.97$^{*}$ & $-$66.99 $\pm$ 13.25$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & 0.78 $\pm$ 0.07$^{*}$ & 1.01 $\pm$ 0.11$^{*}$ & $-$45.17 $\pm$ 5.56$^{*}$ & $-$66.68 $\pm$ 14.41$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$0.05 $\pm$ 0.05 & 0.65 $\pm$ 0.18$^{*}$ & $-$46.01 $\pm$ 2.98$^{*}$ & $-$67.04 $\pm$ 13.24$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Network design, all $k$}} \\
+covering & 18.19 $\pm$ 3.95$^{*}$ & 31.92 $\pm$ 11.53$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 14.65 $\pm$ 4.68$^{*}$ & 16.32 $\pm$ 17.29 & $-$3.54 $\pm$ 4.60 & $-$15.60 $\pm$ 14.11 \\
+lookahead, five duals & -- & -- & $-$18.19 $\pm$ 3.95$^{*}$ & $-$31.92 $\pm$ 11.53$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 7.95 $\pm$ 3.43$^{*}$ & 9.99 $\pm$ 3.35$^{*}$ & $-$10.24 $\pm$ 1.41$^{*}$ & $-$21.93 $\pm$ 9.74$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 6.75 $\pm$ 3.53 & 8.35 $\pm$ 2.38$^{*}$ & $-$11.44 $\pm$ 1.69$^{*}$ & $-$23.57 $\pm$ 8.75$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 17.55 $\pm$ 4.48$^{*}$ & 26.49 $\pm$ 5.43$^{*}$ & $-$0.64 $\pm$ 1.17 & $-$5.43 $\pm$ 8.41 \\
+GPT-6.1 Sol, coefficients, JointDW & $-$5.08 $\pm$ 4.74 & 5.91 $\pm$ 3.03$^{*}$ & $-$23.27 $\pm$ 1.76$^{*}$ & $-$26.01 $\pm$ 7.32$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$0.49 $\pm$ 1.07 & 1.24 $\pm$ 0.30$^{*}$ & $-$18.68 $\pm$ 3.43$^{*}$ & $-$30.68 $\pm$ 11.47$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & $-$1.28 $\pm$ 1.52 & 1.18 $\pm$ 0.28$^{*}$ & $-$19.47 $\pm$ 3.25$^{*}$ & $-$30.74 $\pm$ 9.52$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & $-$0.47 $\pm$ 0.83 & 0.94 $\pm$ 0.06$^{*}$ & $-$18.65 $\pm$ 3.36$^{*}$ & $-$30.98 $\pm$ 11.56$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$8.28 $\pm$ 3.86$^{*}$ & 0.56 $\pm$ 0.20$^{*}$ & $-$26.47 $\pm$ 1.73$^{*}$ & $-$31.36 $\pm$ 9.43$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Facility location, all $k$}} \\
+covering & 16.14 $\pm$ 5.11$^{*}$ & 62.69 $\pm$ 21.73$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 21.64 $\pm$ 5.79$^{*}$ & 41.08 $\pm$ 20.33$^{*}$ & 5.49 $\pm$ 3.99 & $-$21.61 $\pm$ 23.52 \\
+lookahead, five duals & -- & -- & $-$16.14 $\pm$ 5.11$^{*}$ & $-$62.69 $\pm$ 21.73$^{*}$ \\
+GCG anchor (strong score) & 23.75 $\pm$ 0.00$^{*}$ & 85.96 $\pm$ 0.00$^{*}$ & $-$0.08 $\pm$ 0.00$^{*}$ & 0.76 $\pm$ 0.00$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 11.90 $\pm$ 4.98$^{*}$ & 43.67 $\pm$ 18.89$^{*}$ & $-$4.24 $\pm$ 1.59$^{*}$ & $-$19.02 $\pm$ 9.98$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 7.82 $\pm$ 3.69$^{*}$ & 26.24 $\pm$ 16.08 & $-$8.32 $\pm$ 2.14$^{*}$ & $-$36.45 $\pm$ 10.99$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 12.20 $\pm$ 4.51$^{*}$ & 61.63 $\pm$ 19.79$^{*}$ & $-$3.94 $\pm$ 0.96$^{*}$ & $-$1.06 $\pm$ 3.04 \\
+GPT-6.1 Sol, coefficients, JointDW & $-$6.01 $\pm$ 4.00 & $-$6.36 $\pm$ 13.91 & $-$22.15 $\pm$ 3.64$^{*}$ & $-$69.05 $\pm$ 16.50$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$1.34 $\pm$ 0.94 & $-$6.90 $\pm$ 7.46 & $-$17.49 $\pm$ 4.46$^{*}$ & $-$69.59 $\pm$ 17.98$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & $-$0.96 $\pm$ 1.01 & $-$9.65 $\pm$ 9.76 & $-$17.10 $\pm$ 4.63$^{*}$ & $-$72.34 $\pm$ 17.31$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & $-$0.59 $\pm$ 0.58 & $-$4.35 $\pm$ 5.11 & $-$16.73 $\pm$ 4.70$^{*}$ & $-$67.04 $\pm$ 18.90$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$7.16 $\pm$ 3.26$^{*}$ & $-$13.37 $\pm$ 12.06 & $-$23.30 $\pm$ 3.68$^{*}$ & $-$76.06 $\pm$ 16.87$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{All classes, $k=12$}} \\
+covering & 18.04 $\pm$ 4.28$^{*}$ & 42.29 $\pm$ 8.68$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 9.83 $\pm$ 3.85$^{*}$ & 20.69 $\pm$ 10.73$^{*}$ & $-$8.21 $\pm$ 5.90 & $-$21.60 $\pm$ 12.26 \\
+lookahead, five duals & -- & -- & $-$18.04 $\pm$ 4.28$^{*}$ & $-$42.29 $\pm$ 8.68$^{*}$ \\
+GCG anchor (SPFWH score) & 34.04 $\pm$ 0.16$^{*}$ & 72.48 $\pm$ 24.55$^{*}$ & 1.13 $\pm$ 0.05$^{*}$ & 6.53 $\pm$ 2.99$^{*}$ \\
+GCG anchor (SPFWH score, names) & 33.72 $\pm$ 0.21$^{*}$ & 78.11 $\pm$ 20.90$^{*}$ & 1.05 $\pm$ 0.11$^{*}$ & 7.05 $\pm$ 2.64$^{*}$ \\
+GCG anchor (strong score) & 23.75 $\pm$ 0.00$^{*}$ & 85.96 $\pm$ 0.00$^{*}$ & $-$0.08 $\pm$ 0.00$^{*}$ & 0.76 $\pm$ 0.00$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 6.28 $\pm$ 2.72$^{*}$ & 18.26 $\pm$ 4.35$^{*}$ & $-$11.76 $\pm$ 2.63$^{*}$ & $-$24.03 $\pm$ 6.19$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 3.72 $\pm$ 2.52 & 12.37 $\pm$ 3.36$^{*}$ & $-$14.32 $\pm$ 2.02$^{*}$ & $-$29.92 $\pm$ 6.40$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 12.96 $\pm$ 3.73$^{*}$ & 33.92 $\pm$ 6.60$^{*}$ & $-$5.08 $\pm$ 1.76$^{*}$ & $-$8.37 $\pm$ 4.92 \\
+GPT-6.1 Sol, coefficients, JointDW & $-$5.47 $\pm$ 2.80$^{*}$ & 6.22 $\pm$ 3.64$^{*}$ & $-$23.51 $\pm$ 1.90$^{*}$ & $-$36.07 $\pm$ 6.73$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$0.96 $\pm$ 0.80 & 0.67 $\pm$ 0.64 & $-$19.00 $\pm$ 3.64$^{*}$ & $-$41.62 $\pm$ 8.47$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & $-$1.70 $\pm$ 1.06 & 0.42 $\pm$ 0.74 & $-$19.74 $\pm$ 2.53$^{*}$ & $-$41.87 $\pm$ 7.42$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & $-$0.32 $\pm$ 0.61 & 0.78 $\pm$ 0.50 & $-$18.36 $\pm$ 3.84$^{*}$ & $-$41.51 $\pm$ 8.50$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$6.20 $\pm$ 2.57$^{*}$ & $-$0.42 $\pm$ 1.16 & $-$24.25 $\pm$ 1.84$^{*}$ & $-$42.71 $\pm$ 7.29$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{All classes, $k=16$}} \\
+covering & 43.46 $\pm$ 6.26$^{*}$ & 82.91 $\pm$ 23.45$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 18.44 $\pm$ 7.67$^{*}$ & 18.21 $\pm$ 19.21 & $-$25.02 $\pm$ 10.97$^{*}$ & $-$64.70 $\pm$ 24.77$^{*}$ \\
+lookahead, five duals & -- & -- & $-$43.46 $\pm$ 6.26$^{*}$ & $-$82.91 $\pm$ 23.45$^{*}$ \\
+GCG anchor (SPFWH score) & 60.04 $\pm$ 0.54$^{*}$ & 89.27 $\pm$ 21.10$^{*}$ & 0.78 $\pm$ 0.07$^{*}$ & 12.34 $\pm$ 2.82$^{*}$ \\
+GCG anchor (SPFWH score, names) & 60.04 $\pm$ 0.54$^{*}$ & 89.27 $\pm$ 21.10$^{*}$ & 0.78 $\pm$ 0.07$^{*}$ & 12.34 $\pm$ 2.82$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 21.14 $\pm$ 3.98$^{*}$ & 41.43 $\pm$ 20.06$^{*}$ & $-$22.32 $\pm$ 5.37$^{*}$ & $-$41.48 $\pm$ 13.23$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 12.65 $\pm$ 2.49$^{*}$ & 23.81 $\pm$ 15.73 & $-$30.81 $\pm$ 4.56$^{*}$ & $-$59.09 $\pm$ 12.85$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 35.25 $\pm$ 5.81$^{*}$ & 72.55 $\pm$ 20.12$^{*}$ & $-$8.21 $\pm$ 1.68$^{*}$ & $-$10.35 $\pm$ 5.49 \\
+GPT-6.1 Sol, coefficients, JointDW & $-$0.22 $\pm$ 2.58 & $-$9.21 $\pm$ 12.45 & $-$43.68 $\pm$ 4.51$^{*}$ & $-$92.12 $\pm$ 16.92$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & 0.17 $\pm$ 0.55 & $-$6.52 $\pm$ 7.89 & $-$43.29 $\pm$ 5.92$^{*}$ & $-$89.43 $\pm$ 19.53$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & 0.54 $\pm$ 0.13$^{*}$ & $-$9.00 $\pm$ 9.57 & $-$42.93 $\pm$ 5.05$^{*}$ & $-$91.91 $\pm$ 18.19$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & 0.62 $\pm$ 0.20$^{*}$ & $-$4.04 $\pm$ 5.40 & $-$42.85 $\pm$ 6.10$^{*}$ & $-$86.94 $\pm$ 20.52$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$1.37 $\pm$ 1.35 & $-$11.81 $\pm$ 11.81 & $-$44.84 $\pm$ 4.28$^{*}$ & $-$94.72 $\pm$ 17.83$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{All instances}} \\
+covering & 26.76 $\pm$ 3.88$^{*}$ & 58.54 $\pm$ 11.09$^{*}$ & -- & -- \\
+lookahead, HiGHS dual & 13.34 $\pm$ 3.34$^{*}$ & 19.70 $\pm$ 9.73$^{*}$ & $-$13.43 $\pm$ 5.30$^{*}$ & $-$38.84 $\pm$ 12.59$^{*}$ \\
+lookahead, five duals & -- & -- & $-$26.76 $\pm$ 3.88$^{*}$ & $-$58.54 $\pm$ 11.09$^{*}$ \\
+GCG anchor (SPFWH score) & 51.37 $\pm$ 5.59$^{*}$ & 83.67 $\pm$ 16.42$^{*}$ & 0.90 $\pm$ 0.09$^{*}$ & 10.40 $\pm$ 2.39$^{*}$ \\
+GCG anchor (SPFWH score, names) & 51.27 $\pm$ 4.88$^{*}$ & 85.55 $\pm$ 15.85$^{*}$ & 0.87 $\pm$ 0.08$^{*}$ & 10.58 $\pm$ 2.24$^{*}$ \\
+GCG anchor (strong score) & 23.75 $\pm$ 0.00$^{*}$ & 85.96 $\pm$ 0.00$^{*}$ & $-$0.08 $\pm$ 0.00$^{*}$ & 0.76 $\pm$ 0.00$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW & 11.73 $\pm$ 2.29$^{*}$ & 27.53 $\pm$ 8.37$^{*}$ & $-$15.03 $\pm$ 2.57$^{*}$ & $-$31.01 $\pm$ 6.62$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW & 7.49 $\pm$ 1.81$^{*}$ & 16.95 $\pm$ 6.64$^{*}$ & $-$19.28 $\pm$ 2.14$^{*}$ & $-$41.59 $\pm$ 6.73$^{*}$ \\
+GPT-6.1 Sol, original, JointDW & 21.39 $\pm$ 3.51$^{*}$ & 49.37 $\pm$ 9.30$^{*}$ & $-$5.37 $\pm$ 1.15$^{*}$ & $-$9.17 $\pm$ 3.67$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW & $-$3.71 $\pm$ 2.11 & 0.04 $\pm$ 5.54 & $-$30.48 $\pm$ 2.16$^{*}$ & $-$58.49 $\pm$ 8.76$^{*}$ \\
+Claude Sonnet 5.5, original, JointDW interleaved with the five-dual order & $-$0.43 $\pm$ 0.51 & $-$2.20 $\pm$ 3.11 & $-$27.20 $\pm$ 3.62$^{*}$ & $-$60.74 $\pm$ 9.99$^{*}$ \\
+Claude Sonnet 5.5, coefficients, JointDW interleaved with the five-dual order & $-$0.67 $\pm$ 0.62 & $-$3.35 $\pm$ 3.90 & $-$27.43 $\pm$ 2.68$^{*}$ & $-$61.88 $\pm$ 9.21$^{*}$ \\
+GPT-6.1 Sol, original, JointDW interleaved with the five-dual order & $-$0.09 $\pm$ 0.37 & $-$1.15 $\pm$ 2.13 & $-$26.85 $\pm$ 3.66$^{*}$ & $-$59.69 $\pm$ 10.24$^{*}$ \\
+GPT-6.1 Sol, coefficients, JointDW interleaved with the five-dual order & $-$5.16 $\pm$ 1.75$^{*}$ & $-$4.98 $\pm$ 4.83 & $-$31.93 $\pm$ 2.10$^{*}$ & $-$63.51 $\pm$ 9.11$^{*}$ \\

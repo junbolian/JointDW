@@ -46,14 +46,14 @@ def _mean(xs):
 def _se_row(values: dict, prefix: str) -> dict:
     lo, hi, se = results.boot_ci_se(sorted(values.items()))
     return {f"{prefix}_mean": _mean(values.values()), f"{prefix}_se": se, f"{prefix}_lo": lo, f"{prefix}_hi": hi,
-            "n_instances": len(values)}
+            "n_instances": len(values), "n_groups": cluster.n_groups(values)}
 
 
 def _paired(a: dict, b: dict) -> dict:
     both = sorted(n for n in a if a[n] is not None and b.get(n) is not None)
     diffs = [(n, a[n] - b[n]) for n in both]
     lo, hi, se = results.boot_ci_se(diffs)
-    return {"n_instances": len(both), "mean_a": _mean(a[n] for n in both), "mean_b": _mean(b[n] for n in both),
+    return {"n_instances": len(both), "n_groups": cluster.n_groups(both), "mean_a": _mean(a[n] for n in both), "mean_b": _mean(b[n] for n in both),
             "mean_difference": _mean(d for _, d in diffs), "se_difference": se, "lo": lo, "hi": hi,
             "asterisk": "*" if lo is not None and (lo > 0 or hi < 0) else ""}
 
@@ -99,7 +99,7 @@ def control_tables(work: Path, data_dirs: dict, control_dirs: dict) -> dict:
                 vals[cond] = {"hit1": h, "recall": rc}
                 pred.append({"configuration": cfg, "presentation": CONTROL[cond], "class": cls,
                              **{k: v for k, v in _se_row(h, "hit1").items()},
-                             **{k: v for k, v in _se_row(rc, "recall").items() if k != "n_instances"}})
+                             **{k: v for k, v in _se_row(rc, "recall").items() if k not in ("n_instances", "n_groups")}})
                 for s in (2, 3):
                     for meth in ("jointdw", "interleaved"):
                         e = _by_instance([x for x in srch if x["config"] == cfg and x["method"] == meth and x["s"] == s
@@ -181,7 +181,7 @@ def five_duals_tables(work: Path, five_root: Path, answer_dirs: dict) -> dict:
             h = {n: results.lookahead_hit1(n, truth_of(n)) for n in names}
             first.append({"set": phase, "order": label, **_se_row(h, "hit1"),
                           **{k: v for k, v in _se_row({n: h[n] / len(insts[n]["truth"]["joint"]) for n in names},
-                                                      "recall").items() if k != "n_instances"}})
+                                                      "recall").items() if k not in ("n_instances", "n_groups")}})
             for n in search_names:
                 t = truth_of(n)
                 k = len(t["families"])

@@ -633,7 +633,7 @@ def _pm(m, se, d=3):
 
 def report(tables: dict, splits: list, items: dict, sets: list) -> str:
     """The report: per split and variant, per instance set, class and size limit, the numbers of the tables (mean ±
-    standard error of the cluster bootstrap; * when the 95% interval of a paired difference excludes 0), without
+    standard error of the two-stage bootstrap; * when the 95% interval of a paired difference excludes 0), without
     interpretation."""
     hp = ", ".join(f"{k} = {v}" for k, v in HYPERPARAMETERS.items())
     L = ["# Learned structural predictor", "",

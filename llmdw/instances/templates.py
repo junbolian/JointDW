@@ -260,7 +260,7 @@ def facility_location(demand=(2, 2, 3), capacity=(4, 4), open_cost=(5, 6), assig
 
 def rich_lot_sizing(demand=((2, 2, 2), (0, 3, 3)), capacity=(7, 7, 7), setup_time=(1, 1), min_lot=(2, 2),
                     storage=(6, 6, 6), safety=(1, 0), overtime=(2, 2, 2), setup_budget=3, holding=(1, 1),
-                    setup=(6, 7), overtime_cost=3, max_setups=None, name="rich_ls") -> MILP:
+                    setup=(6, 7), overtime_cost=3, max_setups=None, extra=None, name="rich_ls") -> MILP:
     """Two-item multi-period lot sizing with setup times, minimum lots, storage, safety stock, one setup per period,
     overtime and a setup budget (9 constraint families on shared variables; I * T binary setups). max_setups gives the
     limit of MaxSetupsPerPeriod per period (default 1 in every period, the rich models of the paper)."""
@@ -330,13 +330,64 @@ def rich_lot_sizing(demand=((2, 2, 2), (0, 3, 3)), capacity=(7, 7, 7), setup_tim
                      "SetupBudget": "the total number of setups is at most the budget"}
     if max_setups is not None:
         m.family_text["MaxSetupsPerPeriod_#"] = "at most a given number of products is set up in a period"
+    if extra:
+        _rich_ls_extra(m, extra, x, s, y, o, I, T)
     return m
+
+
+def _rich_ls_extra(m, extra, x, s, y, o, I, T) -> None:
+    """The families added for the rich models with 12 and 16 families (extra maps a family name to its data)."""
+    text, desc = {}, []
+    if "ProductStorageCap" in extra:
+        for i in range(I):
+            for t in range(T):
+                m.add_row(f"ProductStorageCap_{i + 1}_{t + 1}", "ProductStorageCap_#_#", {s[i, t]: 1},
+                          up=extra["ProductStorageCap"][i])
+        text["ProductStorageCap_#_#"] = "the stock of each product is at most its own storage limit"
+        desc.append("each product has its own storage limit")
+    if "ProductionCap" in extra:
+        for i in range(I):
+            for t in range(T):
+                m.add_row(f"ProductionCap_{i + 1}_{t + 1}", "ProductionCap_#_#", {x[i, t]: 1},
+                          up=extra["ProductionCap"][i][t])
+        text["ProductionCap_#_#"] = "the production of each product in each period is at most its own limit"
+        desc.append("the production of each product in each period has its own limit")
+    if "TotalOvertime" in extra:
+        m.add_row("TotalOvertime", "TotalOvertime", {o[t]: 1 for t in range(T)}, up=extra["TotalOvertime"])
+        text["TotalOvertime"] = "the total overtime over the horizon is at most its limit"
+        desc.append("the total overtime over the horizon is limited")
+    if "ProductionBudget" in extra:
+        for i in range(I):
+            m.add_row(f"ProductionBudget_{i + 1}", "ProductionBudget_#", {x[i, t]: 1 for t in range(T)},
+                      up=extra["ProductionBudget"][i])
+        text["ProductionBudget_#"] = "the total production of each product over the horizon is at most its material availability"
+        desc.append("the material available for each product over the horizon is limited")
+    if "WorkforceLimit" in extra:
+        w, W = extra["WorkforceLimit"]
+        for t in range(T):
+            m.add_row(f"WorkforceLimit_{t + 1}", "WorkforceLimit_#", {x[i, t]: w[i] for i in range(I)}, up=W[t])
+        text["WorkforceLimit_#"] = "the labor hours used in a period are at most the workforce available"
+        desc.append("production uses labor hours, which are limited in every period")
+    if "HoldingBudget" in extra:
+        h = extra["HoldingBudget"]
+        m.add_row("HoldingBudget", "HoldingBudget", {s[i, t]: h[0][i] for i in range(I) for t in range(T)}, up=h[1])
+        text["HoldingBudget"] = "the weighted stock over the horizon is at most the holding budget"
+        desc.append("the weighted stock over the horizon is limited by a holding budget")
+    if "NoConsecutiveSetups" in extra:
+        for i in range(I):
+            for t in range(T - 1):
+                m.add_row(f"NoConsecutiveSetups_{i + 1}_{t + 1}", "NoConsecutiveSetups_#_#",
+                          {y[i, t]: 1, y[i, t + 1]: 1}, up=1)
+        text["NoConsecutiveSetups_#_#"] = "a product is not set up in two consecutive periods"
+        desc.append("a product is not set up in two consecutive periods")
+    m.family_text.update(text)
+    m.description += " In addition, " + "; ".join(desc) + "."
 
 
 def rich_network_design(n_nodes=4, arcs=((0, 1), (1, 0), (0, 2), (1, 2), (2, 1), (1, 3), (2, 3)),
                         commodities=((0, 3, 2), (0, 2, 1)), capacity=(2, 2, 2, 2, 2, 2, 2),
                         fixed=(4, 4, 4, 3, 3, 4, 3), unit=(1, 1, 1, 1, 1, 1, 1), budget=16, max_out=(2, 2, 2, 1),
-                        name="rich_nd") -> MILP:
+                        extra=None, name="rich_nd") -> MILP:
     """Multicommodity fixed-charge network design with a build budget, out-degree limits, opposite arcs and an
     opened incoming arc at every destination (7 constraint families on shared variables; one binary per arc)."""
     letters = string.ascii_uppercase
@@ -390,12 +441,84 @@ def rich_network_design(n_nodes=4, arcs=((0, 1), (1, 0), (0, 2), (1, 2), (2, 1),
                      "NodeOutDegree_#": "at most a given number of arcs is opened out of each node",
                      "OppositeArcs_#": "an arc and its opposite arc are not both opened",
                      "InArcCover_#": "every destination that is not an origin has an opened incoming arc"}
+    if extra:
+        _rich_nd_extra(m, extra, x, y, n_nodes, arcs, commodities)
     return m
+
+
+def _rich_nd_extra(m, extra, x, y, n_nodes, arcs, commodities) -> None:
+    text, desc = {}, []
+    K = range(len(commodities))
+    ins = {v: [a for a, (_, j) in enumerate(arcs) if j == v] for v in range(n_nodes)}
+    outs = {v: [a for a, (i, _) in enumerate(arcs) if i == v] for v in range(n_nodes)}
+    if "NodeInDegree" in extra:
+        for v in range(n_nodes):
+            if ins[v]:
+                m.add_row(f"NodeInDegree_{v + 1}", "NodeInDegree_#", {y[a]: 1 for a in ins[v]}, up=extra["NodeInDegree"][v])
+        text["NodeInDegree_#"] = "at most a given number of arcs is opened into each node"
+        desc.append("at most a given number of arcs may be opened into each node")
+    if "NodeThroughput" in extra:
+        for v in range(n_nodes):
+            if ins[v]:
+                m.add_row(f"NodeThroughput_{v + 1}", "NodeThroughput_#", {x[k, a]: 1 for k in K for a in ins[v]},
+                          up=extra["NodeThroughput"][v])
+        text["NodeThroughput_#"] = "the total flow into each node is at most its throughput"
+        desc.append("the total flow into each node is limited by its throughput")
+    if "CommodityArcCap" in extra:
+        for k in K:
+            for a in range(len(arcs)):
+                m.add_row(f"CommodityArcCap_{k + 1}_{a + 1}", "CommodityArcCap_#_#", {x[k, a]: 1},
+                          up=extra["CommodityArcCap"][k][a])
+        text["CommodityArcCap_#_#"] = "the flow of each commodity on each arc is at most its own limit"
+        desc.append("the flow of each commodity on each arc has its own limit")
+    if "MinBuiltArcs" in extra:
+        m.add_row("MinBuiltArcs", "MinBuiltArcs", {y[a]: 1 for a in range(len(arcs))}, lo=extra["MinBuiltArcs"])
+        text["MinBuiltArcs"] = "at least a given number of arcs is opened"
+        desc.append("at least a given number of arcs must be opened")
+    if "FlowCostBudget" in extra:
+        c, F = extra["FlowCostBudget"]
+        m.add_row("FlowCostBudget", "FlowCostBudget", {x[k, a]: c[k][a] for k in K for a in range(len(arcs))}, up=F)
+        text["FlowCostBudget"] = "the weighted flow is at most the flow cost budget"
+        desc.append("the weighted flow is limited by a budget")
+    if "ArcConflict" in extra:
+        for n_, (a, b) in enumerate(extra["ArcConflict"]):
+            m.add_row(f"ArcConflict_{n_ + 1}", "ArcConflict_#", {y[a]: 1, y[b]: 1}, up=1)
+        text["ArcConflict_#"] = "the two arcs of each conflicting pair are not both opened"
+        desc.append("the arcs of a given list of pairs are not both opened")
+    if "OutArcCover" in extra:
+        for v in range(n_nodes):
+            if outs[v]:
+                m.add_row(f"OutArcCover_{v + 1}", "OutArcCover_#", {y[a]: 1 for a in outs[v]}, lo=1)
+        text["OutArcCover_#"] = "every node with outgoing arcs has an opened outgoing arc"
+        desc.append("every node with outgoing arcs needs an opened outgoing arc")
+    if "SplitLimit" in extra:
+        rho = extra["SplitLimit"]
+        split = [a for a, (i, _) in enumerate(arcs) if len(outs[i]) >= 2]   # arcs leaving a node with 2+ outgoing arcs
+        for k in K:
+            for a in split:
+                m.add_row(f"SplitLimit_{k + 1}_{a + 1}", "SplitLimit_#_#", {x[k, a]: 1}, up=rho * commodities[k][2])
+        text["SplitLimit_#_#"] = ("the flow of a commodity on an arc leaving a node with at least two outgoing arcs is "
+                                  "at most a share of its demand")
+        desc.append("no arc leaving a node with at least two outgoing arcs carries more than a given share of a "
+                    "commodity's demand")
+    if "DegreeBalance" in extra:
+        for v in range(n_nodes):
+            if ins[v] or outs[v]:
+                coefs = {y[a]: 1 for a in outs[v]}
+                for a in ins[v]:
+                    coefs[y[a]] = coefs.get(y[a], 0) - 1
+                # the two sides of -1 <= out - in <= 1 as two rows of the same family
+                m.add_row(f"DegreeBalance_{v + 1}_1", "DegreeBalance_#_#", coefs, up=1)
+                m.add_row(f"DegreeBalance_{v + 1}_2", "DegreeBalance_#_#", coefs, lo=-1)
+        text["DegreeBalance_#_#"] = "the opened out-degree and in-degree of each node differ by at most one"
+        desc.append("the numbers of opened arcs out of and into each node differ by at most one")
+    m.family_text.update(text)
+    m.description += " In addition, " + "; ".join(desc) + "."
 
 
 def rich_facility_location(demand=(2, 2, 3), capacity=(4, 4, 5), open_cost=(5, 6, 6),
                            assign_cost=((1, 3, 2), (3, 1, 2), (2, 2, 1)), budget=12, min_open=2,
-                           min_use=(2, 2, 3), conflict=(0, 1), name="rich_fl") -> MILP:
+                           min_use=(2, 2, 3), conflict=(0, 1), extra=None, name="rich_fl") -> MILP:
     """Capacitated facility location with an opening budget, a minimum number of open facilities, minimum
     utilization of an opened facility and one conflicting pair (7 constraint families; one binary per facility)."""
     I, J = len(capacity), len(demand)
@@ -436,4 +559,59 @@ def rich_facility_location(demand=(2, 2, 3), capacity=(4, 4, 5), open_cost=(5, 6
                      "OpenCount": "at least a given number of facilities is opened",
                      "MinUtilization_#": "an opened facility serves at least its minimum utilization",
                      "FacilityConflict": "the two conflicting facilities are not both opened"}
+    if extra:
+        _rich_fl_extra(m, extra, x, y, I, J, demand, capacity, assign_cost)
     return m
+
+
+def _rich_fl_extra(m, extra, x, y, I, J, demand, capacity, assign_cost) -> None:
+    text, desc = {}, []
+    if "MaxCustomersPerFacility" in extra:
+        for i in range(I):
+            m.add_row(f"MaxCustomersPerFacility_{i + 1}", "MaxCustomersPerFacility_#", {x[i, j]: 1 for j in range(J)},
+                      up=extra["MaxCustomersPerFacility"][i])
+        text["MaxCustomersPerFacility_#"] = "the customer shares served by a facility sum to at most its limit"
+        desc.append("each facility serves at most a given number of customers")
+    if "DistanceLimit" in extra:
+        for n_, (i, j) in enumerate(extra["DistanceLimit"]):
+            m.add_row(f"DistanceLimit_{n_ + 1}", "DistanceLimit_#", {x[i, j]: 1}, up=0)
+        text["DistanceLimit_#"] = "a customer beyond the radius of a facility is not served by it"
+        desc.append("a customer is not served by a facility beyond its radius")
+    if "RegionCover" in extra:
+        for n_, R in enumerate(extra["RegionCover"]):
+            m.add_row(f"RegionCover_{n_ + 1}", "RegionCover_#", {y[i]: 1 for i in R}, lo=1)
+        text["RegionCover_#"] = "every region has an opened facility"
+        desc.append("the facilities are partitioned into regions, each of which needs an opened facility")
+    if "TotalCapacity" in extra:
+        m.add_row("TotalCapacity", "TotalCapacity", {y[i]: capacity[i] for i in range(I)}, lo=sum(demand))
+        text["TotalCapacity"] = "the capacity of the opened facilities covers the total demand"
+        desc.append("the opened capacity must cover the total demand")
+    if "TransportBudget" in extra:
+        m.add_row("TransportBudget", "TransportBudget",
+                  {x[i, j]: assign_cost[i][j] * demand[j] for i in range(I) for j in range(J)}, up=extra["TransportBudget"])
+        text["TransportBudget"] = "the serving cost is at most the transport budget"
+        desc.append("the serving cost is limited by a transport budget")
+    if "SplitLimit" in extra:
+        sig = extra["SplitLimit"]
+        for i in range(I):
+            for j in range(J):
+                m.add_row(f"SplitLimit_{i + 1}_{j + 1}", "SplitLimit_#_#", {x[i, j]: 1}, up=sig)
+        text["SplitLimit_#_#"] = "a facility serves at most a given share of each customer's demand"
+        desc.append("no facility serves more than a given share of a customer's demand")
+    if "MinAssignment" in extra:
+        for n_, (i, j, mm) in enumerate(extra["MinAssignment"]):
+            m.add_row(f"MinAssignment_{n_ + 1}", "MinAssignment_#", {x[i, j]: 1, y[i]: -mm}, lo=0)
+        text["MinAssignment_#"] = "an opened facility serves at least a given share of each listed customer"
+        desc.append("an opened facility serves at least a given share of certain customers")
+    if "FacilityPairCover" in extra:
+        for n_, (i, l) in enumerate(extra["FacilityPairCover"]):
+            m.add_row(f"FacilityPairCover_{n_ + 1}", "FacilityPairCover_#", {y[i]: 1, y[l]: 1}, lo=1)
+        text["FacilityPairCover_#"] = "at least one facility of each listed pair is opened"
+        desc.append("at least one facility of each of a given list of pairs is opened")
+    if "TransportPreference" in extra:
+        for n_, (j, i, l) in enumerate(extra["TransportPreference"]):
+            m.add_row(f"TransportPreference_{n_ + 1}", "TransportPreference_#", {x[i, j]: 1, x[l, j]: -1}, lo=0)
+        text["TransportPreference_#"] = "a listed customer is served at least as much by its preferred facility"
+        desc.append("certain customers are served at least as much by their preferred facility as by another one")
+    m.family_text.update(text)
+    m.description += " In addition, " + "; ".join(desc) + "."
