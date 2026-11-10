@@ -23,8 +23,9 @@ results (llmdw.tables.paper_v1.compare_with_paper): the tables whose layout the 
 position against the reference body, the other tables by looking for every printed number, at its printed precision,
 among the values of the result CSVs it comes from. Every difference is written to the report and fails the test,
 except the cells declared as derived from the instance lists (paper_v1.DERIVED). Nothing of the paper is kept in this
-repository. JOINTDW_PAPER_VERSION names the version of the paper source: 1.1.3 (the default) and 1.1, which have the
-same table bodies, or 1.0, whose benchmark tables print earlier standard errors, which are then reported but allowed.
+repository. JOINTDW_PAPER_VERSION names the version of the paper source: 1.1.4 (the default), 1.1.3 and 1.1, which
+have the same table bodies, or 1.0, whose benchmark tables print earlier standard errors, which are then reported
+but allowed.
 
 The derived cells of the instance tables (tab:rich-inst, tab:rich-large-inst, tab:bench-inst) are recomputed from the
 instance files and the gain tables in data/work (llmdw.tables.paper_v1.instance_cells) and compared with
@@ -84,8 +85,8 @@ LATER_SOURCES = [p for p in SOURCES if all((p / d).is_dir() for d in LATER_BODIE
                  and (p / "paper" / "figure_data" / "search_cost_vs_misses_after_cut.csv").exists()]
 PAPER_TEX = os.environ.get("JOINTDW_PAPER_TEX")
 # the version of the paper source and the tables whose standard errors may differ from this release
-PAPER_VERSIONS = {"1.0": paper_v1.STANDARD_ERRORS_BEFORE_V1_1, "1.1": (), "1.1.3": ()}
-PAPER_VERSION = os.environ.get("JOINTDW_PAPER_VERSION", "1.1.3")
+PAPER_VERSIONS = {"1.0": paper_v1.STANDARD_ERRORS_BEFORE_V1_1, "1.1": (), "1.1.3": (), "1.1.4": ()}
+PAPER_VERSION = os.environ.get("JOINTDW_PAPER_VERSION", "1.1.4")
 WORK = ROOT / "data" / "work"
 HAS_INSTANCES = all((WORK / p).exists() for p in ("rich_models/instances.txt", "rich_models_large/instances.txt",
                                                   "benchmark_std/full_set/all_instances.txt"))
