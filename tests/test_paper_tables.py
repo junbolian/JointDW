@@ -23,16 +23,25 @@ results (llmdw.tables.paper_v1.compare_with_paper): the tables whose layout the 
 position against the reference body, the other tables by looking for every printed number, at its printed precision,
 among the values of the result CSVs it comes from. Every difference is written to the report and fails the test,
 except the cells declared as derived from the instance lists (paper_v1.DERIVED). Nothing of the paper is kept in this
-repository. For paper v1.0, set JOINTDW_PAPER_VERSION=1.0: its benchmark tables print earlier standard errors, which
-are then reported but allowed.
+repository. JOINTDW_PAPER_VERSION names the version of the paper source: 1.1.3 (the default) and 1.1, which have the
+same table bodies, or 1.0, whose benchmark tables print earlier standard errors, which are then reported but allowed.
+
+The derived cells of the instance tables (tab:rich-inst, tab:rich-large-inst, tab:bench-inst) are recomputed from the
+instance files and the gain tables in data/work (llmdw.tables.paper_v1.instance_cells) and compared with
+tests/reference/instance_cells.json, which the same function wrote, and with the result CSVs that hold the same
+quantity per instance; with JOINTDW_PAPER_TEX, every cell of their derived columns is compared with the paper
+(paper_v1.compare_instance_cells), and every cell of paper_v1.DERIVED must be among the cells compared.
 """
+import csv
+import json
 import os
 import re
+from collections import Counter
 from pathlib import Path
 
 import pytest
 
-from llmdw.tables import experiments, paper
+from llmdw.tables import experiments, paper, paper_v1
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "tests" / "reference"
@@ -74,6 +83,12 @@ LATER_NAMES = sorted([n for _, names in LATER_BODIES.values() for n in names] + 
 LATER_SOURCES = [p for p in SOURCES if all((p / d).is_dir() for d in LATER_BODIES)
                  and (p / "paper" / "figure_data" / "search_cost_vs_misses_after_cut.csv").exists()]
 PAPER_TEX = os.environ.get("JOINTDW_PAPER_TEX")
+# the version of the paper source and the tables whose standard errors may differ from this release
+PAPER_VERSIONS = {"1.0": paper_v1.STANDARD_ERRORS_BEFORE_V1_1, "1.1": (), "1.1.3": ()}
+PAPER_VERSION = os.environ.get("JOINTDW_PAPER_VERSION", "1.1.3")
+WORK = ROOT / "data" / "work"
+HAS_INSTANCES = all((WORK / p).exists() for p in ("rich_models/instances.txt", "rich_models_large/instances.txt",
+                                                  "benchmark_std/full_set/all_instances.txt"))
 
 
 @pytest.mark.skipif(not SOURCES, reason="no released data: run scripts/fetch_data.sh first")
@@ -170,8 +185,6 @@ def test_later_table_bodies_as_written(source):
 @pytest.mark.skipif(not LATER_SOURCES, reason="no released data v1.2: run scripts/fetch_data.sh first")
 @pytest.mark.parametrize("source", LATER_SOURCES, ids=lambda p: p.name)
 def test_paper_layout_bodies_from_their_csvs(source, tmp_path):
-    from llmdw.tables import paper_v1
-
     assert sorted(paper_v1.write_tables(source, tmp_path)) == sorted(PAPER_V1_NAMES)
     for name in PAPER_V1_NAMES:
         _compare((tmp_path / name).read_text(encoding="utf-8"),
@@ -182,14 +195,48 @@ def test_paper_layout_bodies_from_their_csvs(source, tmp_path):
 @pytest.mark.skipif(not LATER_SOURCES, reason="no released data v1.2: run scripts/fetch_data.sh first")
 @pytest.mark.parametrize("source", LATER_SOURCES, ids=lambda p: p.name)
 def test_every_table_body_of_the_paper(source, tmp_path):
-    from llmdw.tables import paper_v1
-
     tex = Path(PAPER_TEX).read_text(encoding="utf-8")
     report = paper_v1.compare_with_paper(tex, source, REFERENCE)
     out = Path(os.environ.get("JOINTDW_PAPER_REPORT", tmp_path / "paper_tables_report.json"))
     paper_v1.write_report(report, out)
-    allowed = paper_v1.STANDARD_ERRORS_BEFORE_V1_1 if os.environ.get("JOINTDW_PAPER_VERSION") == "1.0" else ()
+    assert PAPER_VERSION in PAPER_VERSIONS, f"JOINTDW_PAPER_VERSION must be one of {sorted(PAPER_VERSIONS)}"
+    allowed = PAPER_VERSIONS[PAPER_VERSION]
     for lab, r in report.items():
         for d in r.get("differences", []) + r.get("not_found", []):
             print(lab, d)
     assert paper_v1.unexpected(report, allowed) == [], f"differences against the paper: see {out}"
+
+
+@pytest.mark.skipif(not HAS_INSTANCES, reason="no released data v1.2: run scripts/fetch_data.sh first")
+def test_derived_cells_from_the_instance_files_and_gain_tables():
+    built = paper_v1.instance_cells(WORK)
+    assert built == json.loads((REFERENCE / "instance_cells.json").read_text(encoding="utf-8"))
+    for source in LATER_SOURCES:
+        with open(source / "rich_models_instances.csv", newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+        for c, row in zip(paper_v1.CLASSES, built["tab:rich-inst"]):
+            sets = Counter(s for r in rows if r["class"] == c for s in r["minimal_best_sets"].split())
+            assert [str(v) for v in sorted(sets.values())] == row["minimal best sets, instances each"], c
+        with open(source / "experiment_E" / "instances.csv", newline="", encoding="utf-8") as fh:
+            rows = list(csv.DictReader(fh))
+        keys = [(c, k) for c in paper_v1.CLASSES for k in sorted({int(r["k"]) for r in rows if r["class"] == c})]
+        for (c, k), row in zip(keys, built["tab:rich-large-inst"]):
+            g = [int(r["n_joint_supports"]) for r in rows if r["class"] == c and int(r["k"]) == k]
+            assert f"{sum(g) / len(g):.1f}" == row["zero-marginal groups per instance, mean"][0], (c, k)
+        with open(source / "experiment_C" / "benchmark_instances.csv", newline="", encoding="utf-8") as fh:
+            n = Counter(r["class"] for r in csv.DictReader(fh))
+        assert [[str(n[c])] for c in paper_v1.CLASSES] == [r["instances"] for r in built["tab:bench-inst"]]
+
+
+@pytest.mark.skipif(not PAPER_TEX, reason="JOINTDW_PAPER_TEX does not name the LaTeX source of the paper")
+@pytest.mark.skipif(not HAS_INSTANCES, reason="no released data v1.2: run scripts/fetch_data.sh first")
+def test_derived_cells_of_the_instance_tables_of_the_paper(tmp_path):
+    tex = Path(PAPER_TEX).read_text(encoding="utf-8")
+    report = paper_v1.compare_instance_cells(tex, WORK)
+    out = Path(os.environ.get("JOINTDW_PAPER_REPORT", tmp_path / "paper_tables_report.json"))
+    paper_v1.write_report(report, out.with_name(out.stem + "_derived_cells.json"))
+    for lab, r in report.items():
+        for d in r["differences"] + r["derived_not_checked"]:
+            print(lab, d)
+    assert [d for r in report.values() for d in r["differences"]] == []
+    assert [d for r in report.values() for d in r["derived_not_checked"]] == []

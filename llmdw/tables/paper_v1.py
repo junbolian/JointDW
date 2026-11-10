@@ -418,3 +418,121 @@ def unexpected(report: dict, standard_errors_allowed=()) -> list:
 
 def write_report(report: dict, path: Path) -> None:
     Path(path).write_text(_json.dumps(report, indent=1, default=str), encoding="utf-8")
+
+
+# ---------------------------------------------------------------- derived cells of the instance tables
+# The columns of the instance tables whose cells no result CSV holds (column index in the body of the paper, name, and
+# whether the order of the numbers in a cell is fixed). instance_cells recomputes them from the instance files and the
+# gain tables of the released data; compare_instance_cells compares them with the paper, cell by cell, and confirms
+# that every cell declared in DERIVED is among the cells it checks.
+INSTANCE_COLUMNS = {"tab:rich-inst": [(2, "rows x columns", True), (4, "minimal best sets, instances each", False),
+                                      (5, "zero-marginal groups per instance, range", True)],
+                    "tab:rich-large-inst": [(5, "zero-marginal groups per instance, mean", True),
+                                            (6, "instances with a positive gain at s = 2", True)],
+                    "tab:bench-inst": [(2, "instances", True)]}
+
+
+def _mps_size(path: Path) -> tuple:
+    """(rows without the objective, columns) of a model file in MPS format."""
+    rows, cols, sec = 0, set(), None
+    with open(path, encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip() or line.startswith("*"):
+                continue
+            if not line[0].isspace():
+                sec = line.split()[0]
+                continue
+            f = line.split()
+            if sec == "ROWS" and f[0] != "N":
+                rows += 1
+            elif sec == "COLUMNS" and "'MARKER'" not in line:
+                cols.add(f[0])
+    return rows, len(cols)
+
+
+def _class_of(name: str) -> str:
+    return next(c for c in CLASSES if f"_{c}_" in name)
+
+
+def _range(xs: list) -> list:
+    return [str(min(xs))] if min(xs) == max(xs) else [str(min(xs)), str(max(xs))]
+
+
+def _gain_tables(root: Path) -> dict:
+    """{class: [(instance folder, ground_truth.json)]} of the instances listed in root/instances.txt."""
+    out = {}
+    for n in (root / "instances.txt").read_text(encoding="utf-8").split():
+        d = root / "instances" / n
+        out.setdefault(_class_of(n), []).append((d, _json.loads((d / "ground_truth.json").read_text(encoding="utf-8"))))
+    return out
+
+
+def instance_cells(work: Path) -> dict:
+    """{label: [row, ...]}, each row {column name: [numbers as printed]}, rows in the order of the paper, recomputed from
+    the instance files and the gain tables under WORK (data/work):
+    tab:rich-inst, one row per class (rich_models/): the distinct rows and columns of the model files (model.mps, rows
+    without the objective); the number of instances of each minimal best set, a set of ground_truth.json best_sets with
+    no best proper subset (in increasing order, since the cell orders them by set); the range of the number of
+    zero-marginal groups (joint_supports) per instance.
+    tab:rich-large-inst, one row per class and k (rich_models_large/): the mean number of zero-marginal groups per
+    instance, one decimal; the number of instances on which a set of one or two families has a positive exact gain.
+    tab:bench-inst, one row per class: the number of instances of benchmark_std/full_set/all_instances.txt, with the
+    class of each instance from its meta.json."""
+    from collections import Counter
+    from fractions import Fraction
+
+    work = Path(work)
+    rich = []
+    for c in CLASSES:
+        L = _gain_tables(work / "rich_models")[c]
+        best = Counter()
+        for _, g in L:
+            B = [frozenset(s) for s in g["best_sets"]]
+            best.update(s for s in B if not any(t < s for t in B))
+        rich.append({"rows x columns": [str(x) for s in sorted({_mps_size(d / "model.mps") for d, _ in L}) for x in s],
+                     "minimal best sets, instances each": [str(v) for v in sorted(best.values())],
+                     "zero-marginal groups per instance, range": _range([len(g["joint_supports"]) for _, g in L])})
+    large, tables = [], _gain_tables(work / "rich_models_large")
+    for c in CLASSES:
+        for k in sorted({len(g["families"]) for _, g in tables[c]}):
+            L = [g for _, g in tables[c] if len(g["families"]) == k]
+            pos = sum(any(0 < len(s.split("|")) <= 2 and s and Fraction(v) > 0 for s, v in g["gain"].items()) for g in L)
+            large.append({"zero-marginal groups per instance, mean": [f"{sum(len(g['joint_supports']) for g in L) / len(L):.1f}"],
+                          "instances with a positive gain at s = 2": [str(pos)]})
+    B = work / "benchmark_std"
+    n = Counter(_json.loads((B / "instances" / x / "meta.json").read_text(encoding="utf-8"))["class"]
+                for x in (B / "full_set" / "all_instances.txt").read_text(encoding="utf-8").split())
+    return {"tab:rich-inst": rich, "tab:rich-large-inst": large,
+            "tab:bench-inst": [{"instances": [str(n[c])]} for c in CLASSES]}
+
+
+def _cell_numbers(cell: str) -> list:
+    cell = _re.sub(r"\\cite[pt]?\{[^}]*\}", "", cell).replace("\\times", " ")
+    return _re.findall(r"\d+\.\d+|\d+", cell)
+
+
+def compare_instance_cells(tex: str, work: Path) -> dict:
+    """Per instance table: the cells of INSTANCE_COLUMNS that differ from instance_cells (row, label, column, paper,
+    recomputed), and the cells of DERIVED that are not among the checked cells of their row."""
+    cells, out = instance_cells(work), {}
+    for lab, cols in INSTANCE_COLUMNS.items():
+        P = body_rows(table_block(tex, lab))
+        diffs = [("rows", len(P), len(cells[lab]))] if len(P) != len(cells[lab]) else []
+        unchecked = []
+        for i, (p, row) in enumerate(zip(P, cells[lab])):
+            parts = [x.strip() for x in p.split("&")]
+            checked = []
+            for j, name, ordered in cols:
+                a = _cell_numbers(parts[j]) if j < len(parts) else []
+                a = a if ordered else sorted(a, key=float)
+                if a != row[name]:
+                    diffs.append((i, parts[0][:40], name, a, row[name]))
+                checked += a
+            for r, x in DERIVED.get(lab, []):
+                if r == i:
+                    if x in checked:
+                        checked.remove(x)
+                    else:
+                        unchecked.append((r, x))
+        out[lab] = {"columns": [name for _, name, _ in cols], "differences": diffs, "derived_not_checked": unchecked}
+    return out

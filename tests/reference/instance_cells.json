@@ -1,0 +1,116 @@
+{
+ "tab:rich-inst": [
+  {
+   "rows x columns": [
+    "35",
+    "21"
+   ],
+   "minimal best sets, instances each": [
+    "1",
+    "2",
+    "3",
+    "4"
+   ],
+   "zero-marginal groups per instance, range": [
+    "2",
+    "4"
+   ]
+  },
+  {
+   "rows x columns": [
+    "37",
+    "21",
+    "43",
+    "24"
+   ],
+   "minimal best sets, instances each": [
+    "8"
+   ],
+   "zero-marginal groups per instance, range": [
+    "1"
+   ]
+  },
+  {
+   "rows x columns": [
+    "21",
+    "12",
+    "25",
+    "15"
+   ],
+   "minimal best sets, instances each": [
+    "8"
+   ],
+   "zero-marginal groups per instance, range": [
+    "1",
+    "2"
+   ]
+  }
+ ],
+ "tab:rich-large-inst": [
+  {
+   "zero-marginal groups per instance, mean": [
+    "3.4"
+   ],
+   "instances with a positive gain at s = 2": [
+    "10"
+   ]
+  },
+  {
+   "zero-marginal groups per instance, mean": [
+    "5.6"
+   ],
+   "instances with a positive gain at s = 2": [
+    "10"
+   ]
+  },
+  {
+   "zero-marginal groups per instance, mean": [
+    "3.5"
+   ],
+   "instances with a positive gain at s = 2": [
+    "10"
+   ]
+  },
+  {
+   "zero-marginal groups per instance, mean": [
+    "3.2"
+   ],
+   "instances with a positive gain at s = 2": [
+    "10"
+   ]
+  },
+  {
+   "zero-marginal groups per instance, mean": [
+    "2.9"
+   ],
+   "instances with a positive gain at s = 2": [
+    "7"
+   ]
+  },
+  {
+   "zero-marginal groups per instance, mean": [
+    "9.7"
+   ],
+   "instances with a positive gain at s = 2": [
+    "8"
+   ]
+  }
+ ],
+ "tab:bench-inst": [
+  {
+   "instances": [
+    "20"
+   ]
+  },
+  {
+   "instances": [
+    "20"
+   ]
+  },
+  {
+   "instances": [
+    "19"
+   ]
+  }
+ ]
+}
