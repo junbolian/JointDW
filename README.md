@@ -97,7 +97,7 @@ pip install -e ".[test]"        # the tests, with every other extra
 scripts/fetch_data.sh
 ```
 
-downloads `jointdw_data_v1.2.1.tar.gz` (117.7 MB), the asset of the release [v1.2.1](https://github.com/junbolian/JointDW/releases/tag/v1.2.1), into `data/` and checks the SHA-256 recorded in the script. The release supersedes v1.1.1, v1.1 and v1.0. The archive holds:
+downloads `jointdw_data_v1.2.1.tar.gz` (117.7 MB), the asset of the release [v1.2.1](https://github.com/junbolian/JointDW/releases/tag/v1.2.1), into `data/` and checks the SHA-256 recorded in the script. The release supersedes v1.2, v1.1.1, v1.1 and v1.0. The archive holds:
 
 - the instances and their gain tables: templates, rich models, MIPLIB-NL, benchmark instances, generalized assignment and bin packing;
 - the lookahead values at one and at five duals;
