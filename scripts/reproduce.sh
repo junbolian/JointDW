@@ -17,7 +17,12 @@
 #   results/eval_time/, results/eval_time_large/   the time of one evaluation per collection
 #   results/eval_growth/      the evaluation time against the number of convexified families
 #   results/experiment_G/     the cost accounting (requests, prices, net benefit)
+#   results/rich_models/      the misses counted on the anchor that the search uses, one row per prediction and s
+#   results/experiment_D/*_budget.csv   the time-optimal set within the budget of two families
+#   results/experiment_E/answers_scored.csv, results/experiment_F/answers_scored.csv   one row per answer
 #   results/paper/figure_data the figure data of these experiments
+#   results/paper/experiments/tab_*.tex   the benchmark tables, the misses of the rich models and the instance
+#             collections in the layout of the paper (llmdw.tables.paper_v1)
 # Named outputs of the tables added in the revision:
 #   Table 18  results/paper/experiments/rich_models_data_vs_five_dual.tex (results/rich_models_data_paired_five_dual.csv)
 #   Table 23  results/paper/experiments/experiment_C_paired_hit1.tex (results/experiment_C/benchmark_paired_hit1.csv,
@@ -92,7 +97,8 @@ python -m llmdw.benchmark.no_joint_group score --root $NJ --names-file $NJ/insta
     --answers "GPT-6.1 Sol=$NJ/answers/gpt-6.1-sol" "Claude Sonnet 5.5=$NJ/answers/claude-sonnet-5-5" \
     --prompt-groups $NJ/prompt_groups.csv --out $R/experiment_F --tex-dir $X
 step "rich models with 12 and 16 families"
-python -m llmdw.scoring.rich_models_large --work $W --published $D --out $R/experiment_E --tex-dir $X --figure-dir $FIG
+python -m llmdw.scoring.rich_models_large --work $W --published $D --out $R/experiment_E --tex-dir $X --figure-dir $FIG \
+    --misses-dir $R/rich_models
 python -m llmdw.tables.rich_figure_data --cost-vs-k $FIG/experiment_E_cost_vs_k.csv --results $R \
     --large-predictions $R/experiment_E/predictions.csv --out $FIG
 step "time of one evaluation and its growth with the number of convexified families"
@@ -110,12 +116,16 @@ python -m llmdw.scoring.cost_accounting tables --data $D --work $W --requests $R
     --eval-time-large-paths $W/eval_time_large/paths.json --eval-time-large-runs $W/eval_time_large/runs \
     --bnp-runs $R/experiment_D/bnp_runs.csv --bench-root $B --bench-answers $B/answers \
     --bench-names $B/full_set/all_instances.txt --out $R/experiment_G --tex-dir $X
+step "tables in the layout of the paper (benchmark, misses of the rich models, instance collections)"
+python -m llmdw.tables.paper_v1 --results $R --out $X
 for f in experiment_D_methods experiment_D_paired experiment_D_tradeoff experiment_E_instances experiment_E_predictions \
          experiment_E_search experiment_E_paired experiment_F_methods experiment_F_paired experiment_G_net_benefit \
-         eval_growth; do
+         eval_growth search_cost_vs_misses_after_cut tab_bench tab_app_bench tab_app_bench_time tab_app_tradeoff \
+         tab_app_bench_data tab_app_misses tab_app_larger tab_instances; do
     [ -s "$X/$f.tex" ] || { echo "missing: $X/$f.tex"; exit 1; }
 done
-for f in experiment_D_tradeoff experiment_E_cost_vs_k search_cost_vs_misses eval_growth rich_cost_by_class_k rich_hit1; do
+for f in experiment_D_tradeoff experiment_E_cost_vs_k search_cost_vs_misses search_cost_vs_misses_after_cut eval_growth \
+         rich_cost_by_class_k rich_hit1; do
     [ -s "$FIG/$f.csv" ] || { echo "missing: $FIG/$f.csv"; exit 1; }
 done
 step "done"

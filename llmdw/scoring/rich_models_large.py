@@ -88,10 +88,12 @@ import argparse
 import csv
 import json
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from contextlib import contextmanager
 from fractions import Fraction
 from pathlib import Path
+
+import numpy as np
 
 from llmdw.instances import summaries
 from llmdw.instances.rich_models_build import CLASSES
@@ -554,6 +556,207 @@ def misses_rows(set_label: str, insts: list, rows: list, vals: dict) -> list:
     return out
 
 
+# ---------------------------------------------------------------- misses counted on the anchor that the search uses
+
+def _misses_of(P, Ws):
+    e = min(len(W - P) for W in Ws)
+    return e, min(len(W) for W in Ws if len(W - P) == e)
+
+
+def _entries_to_goal(it, tab, goal):
+    """Entries of an order up to and including its first set of maximal gain, repeated sets counted; None when none."""
+    for j, T in enumerate(it):
+        if T in tab and T in goal:
+            return j + 1
+    return None
+
+
+def misses_per_prediction(set_label: str, insts: list, recs: dict) -> list:
+    """One row per prediction (one sample of one configuration and presentation on one instance) and s in the sizes of
+    its gain table. P is the anchor before the cut (results.support_anchor) and the minimal best sets are the sets of
+    maximal gain among the sets of at most s families that are minimal under inclusion (instances where every such set
+    has gain 0 are left out). O1 is the staged order alone (relabel.staged_iter), O2 the covering order
+    (relabel.covering_iter) and JointDW O1 and O2 taken in turn (relabel.model_iter: an entry that was already
+    evaluated is skipped); every cost is over the family orders of the search tables.
+
+    |P| <= s and |W| <= |P| (W a minimal best set minimizing |W minus P|, ties by the smallest |W|): e, the costs of O1
+    and JointDW, the queries of stages 0 to e (staged_queries with the anchor size |P|), check 1 (e = 0: O1 costs 1 in
+    every order) and check 2 (O1 costs at most the queries of stages 0 to e in every order). |P| <= s and |W| > |P|: the
+    share of the orders in which O1 alone reaches a set of maximal gain, the cost of O1 only when that share is 1.
+    |P| > s: in each order the anchor is cut to its first s families, e is counted on the cut anchor and check 2 uses the
+    anchor size s. Every prediction: check 3 (in every order JointDW costs at most twice the entries of O2 up to and
+    including its first set of maximal gain, repeated sets counted) and check 4 (in every order in which O1 alone reaches
+    a set of maximal gain, JointDW costs at most twice the cost of O1)."""
+    out = []
+    by_inst = defaultdict(list)
+    for (cfg, pres), rs in recs.items():
+        for r in rs:
+            by_inst[r["instance"]].append((cfg, pres, r))
+    for inst in insts:
+        n, t, k = inst["name"], inst["truth"], inst["k"]
+        fams = sorted(t["families"])
+        orders = relabel.family_orders(n, results.base_order(t))
+        for s in inst["sizes"]:
+            tab = results.restricted(t["table"], s)
+            if max(tab.values(), default=0.0) <= 1e-9:
+                continue
+            goal = results.targets(tab, "max")
+            Ws = minimal(best_sets(t, s))
+            cov = results.search_runs(n, t, s, ("covering",))[0]
+            o2_entries = np.asarray([_entries_to_goal(relabel.covering_iter(o, s), tab, goal) or np.nan for o in orders],
+                                    dtype=float)
+            for cfg, pres, r in by_inst[n]:
+                P = results.support_anchor(r, fams)
+                if not P:
+                    continue
+                o1 = relabel.runs((n, s, "staged order alone", P), n, results.base_order(t),
+                                  lambda order: relabel.first_hit(relabel.staged_iter(order, s, P), tab, goal, None,
+                                                                  results.EVAL_LIMIT_S))[0]
+                jd = results.search_runs(n, t, s, ("model", P))[0]
+                reach = float(np.mean(~np.isnan(o1)))
+                hit = ~np.isnan(o1)
+                row = {"set": set_label, "class": inst["class"], "k": k, "instance": n, "configuration": cfg,
+                       "presentation": pres, "sample": r.get("sample", 0), "s": s, "anchor": _key(P),
+                       "anchor_size": len(P), "minimal_best_sets": " ".join(_key(W) for W in Ws),
+                       "cost_jointdw": results.run_value(jd), "cost_covering": results.run_value(cov),
+                       "o1_share_orders_reaching_best": reach,
+                       "check3_jointdw_at_most_twice_covering_entries": bool(np.all(jd <= 2 * o2_entries)),
+                       "orders_jointdw_above_twice_covering_cost": int(np.sum(jd > 2 * cov)),
+                       "check4_jointdw_at_most_twice_o1": bool(np.all(jd[hit] <= 2 * o1[hit])) if hit.any() else None}
+                if len(P) <= s:
+                    e, w = _misses_of(P, Ws)
+                    W = next(x for x in sorted(Ws, key=lambda x: (len(x), sorted(x))) if len(x - P) == e and len(x) == w)
+                    row.update({"case": "anchor within s, |W| <= |P|" if w <= len(P) else "anchor within s, |W| > |P|",
+                                "e": e, "best_set_size": w, "best_set": _key(W),
+                                "cost_o1": results.run_value(o1) if reach == 1.0 else None})
+                    if w <= len(P):
+                        q = staged_queries(k, s, len(P), e)
+                        row.update({"stage_queries_0_to_e": q, "check1_e0_cost_1": None if e else bool(np.all(o1 == 1)),
+                                    "check2_cost_at_most_stage_queries": bool(np.all(o1 <= q))})
+                else:
+                    e0, w0 = _misses_of(P, Ws)
+                    after, ok2 = [], 0
+                    for i, order in enumerate(orders):
+                        e_o, _ = _misses_of(frozenset([f for f in order if f in P][:s]), Ws)
+                        after.append(e_o)
+                        ok2 += bool(o1[i] <= staged_queries(k, s, s, e_o))
+                    row.update({"case": "anchor cut to s", "e_before_cut": e0, "best_set_size_before_cut": w0,
+                                "e_after_cut_mean": sum(after) / len(after),
+                                "e_after_cut_distribution": " ".join(f"{a}:{b}" for a, b in sorted(Counter(after).items())),
+                                "cost_o1": results.run_value(o1), "check2_orders_within_stage_queries": ok2,
+                                "check2_cost_at_most_stage_queries": ok2 == len(orders)})
+                out.append(row)
+    return out
+
+
+def _se_of(rows, key):
+    per = defaultdict(list)
+    for r in rows:
+        if r.get(key) is not None:
+            per[r["instance"]].append(r[key])
+    return experiments._se_row({n: sum(v) / len(v) for n, v in per.items()}, "x")
+
+
+def misses_aggregates(per: list) -> list:
+    """For |P| <= s and |W| <= |P| per set, class, k, s, e and |W|: predictions, instances, mean costs of O1 and JointDW
+    (per-instance means, the two-stage bootstrap of the set's groups), the stage count (its range over the anchor sizes)
+    and the covering order on the same instances; for |W| > |P| per set, class, k and s, rows of their own: predictions,
+    instances, the mean share of the orders in which O1 alone reaches a set of maximal gain, JointDW and the covering
+    order; for |P| > s per set, class, k and s: their number, share, mean costs, e before and after the cut."""
+    out = []
+    keys = sorted({(r["set"], r["class"], r["k"], r["s"]) for r in per}, key=lambda x: (x[0], CLASSES.index(x[1]), x[2], x[3]))
+
+    def covering_mean(g):
+        per_i = defaultdict(list)
+        for r in g:
+            per_i[r["instance"]].append(r["cost_covering"])
+        return results._mean([sum(v) / len(v) for v in per_i.values()])
+
+    for st, c, k, s in keys:
+        rs = [r for r in per if (r["set"], r["class"], r["k"], r["s"]) == (st, c, k, s)]
+        base = {"set": st, "class": c, "k": k, "s": s}
+        within = [r for r in rs if r["case"] == "anchor within s, |W| <= |P|"]
+        for e, w in sorted({(r["e"], r["best_set_size"]) for r in within}):
+            g = [r for r in within if r["e"] == e and r["best_set_size"] == w]
+            a, b = _se_of(g, "cost_o1"), _se_of(g, "cost_jointdw")
+            qs = [r["stage_queries_0_to_e"] for r in g]
+            out.append({**base, "kind": "anchor within s, |W| <= |P|", "e": e, "best_set_size": w, "n_predictions": len(g),
+                        "n_instances": len({r["instance"] for r in g}), "share_of_predictions": len(g) / len(rs),
+                        "cost_o1_mean": a["x_mean"], "cost_o1_se": a["x_se"], "cost_jointdw_mean": b["x_mean"],
+                        "cost_jointdw_se": b["x_se"], "n_groups": b["n_groups"], "stage_queries_0_to_e_min": min(qs),
+                        "stage_queries_0_to_e_max": max(qs), "mean_evaluations_covering": covering_mean(g)})
+        big = [r for r in rs if r["case"] == "anchor within s, |W| > |P|"]
+        if big:
+            b = _se_of(big, "cost_jointdw")
+            out.append({**base, "kind": "anchor within s, |W| > |P|", "n_predictions": len(big),
+                        "n_instances": len({r["instance"] for r in big}), "share_of_predictions": len(big) / len(rs),
+                        "o1_share_orders_reaching_best_mean": sum(r["o1_share_orders_reaching_best"] for r in big) / len(big),
+                        "cost_jointdw_mean": b["x_mean"], "cost_jointdw_se": b["x_se"], "n_groups": b["n_groups"],
+                        "mean_evaluations_covering": covering_mean(big)})
+        cut = [r for r in rs if r["case"] == "anchor cut to s"]
+        if cut:
+            a, b = _se_of(cut, "cost_o1"), _se_of(cut, "cost_jointdw")
+            out.append({**base, "kind": "anchor cut to s", "n_predictions": len(cut),
+                        "n_instances": len({r["instance"] for r in cut}), "share_of_predictions": len(cut) / len(rs),
+                        "cost_o1_mean": a["x_mean"], "cost_o1_se": a["x_se"], "cost_jointdw_mean": b["x_mean"],
+                        "cost_jointdw_se": b["x_se"], "n_groups": b["n_groups"],
+                        "e_before_cut_mean": sum(r["e_before_cut"] for r in cut) / len(cut),
+                        "e_after_cut_mean": sum(r["e_after_cut_mean"] for r in cut) / len(cut)})
+    return out
+
+
+def tex_misses_after_cut(agg: list) -> str:
+    lab = lambda st: "7--9" if "7 to 9" in st else "12--16"
+    L = ["% Search cost against the misses e counted on the anchor that the search uses. Columns: families (7--9 or "
+         "12--16); class; k; e (cut: e before and after the cut to s families; |W| > |P|: the best set has more families "
+         "than the anchor); |W|; predictions; instances; staged order O1 alone; JointDW (mean $\\pm$ standard error, "
+         "two-stage bootstrap); queries of stages 0 to e; covering order. Source: "
+         "figures/data/search_cost_vs_misses_after_cut.csv"]
+    for s in SIZES:
+        L.append(f"\\multicolumn{{11}}{{@{{}}l}}{{\\emph{{$s={s}$}}}} \\\\")
+        for r in (x for x in agg if x["s"] == s):
+            head = f"{lab(r['set'])} & {CLASS_LABELS[r['class']]} & {r['k']}"
+            if r["kind"] == "anchor cut to s":
+                L.append(f"{head} & cut ({_f(r['e_before_cut_mean'])} to {_f(r['e_after_cut_mean'])}) & -- & "
+                         f"{r['n_predictions']} & {r['n_instances']} & {_pm(r['cost_o1_mean'], r['cost_o1_se'])} & "
+                         f"{_pm(r['cost_jointdw_mean'], r['cost_jointdw_se'])} & -- & -- \\\\")
+            elif r["kind"] == "anchor within s, |W| > |P|":
+                L.append(f"{head} & $|W|>|P|$ (O1 reaches in {_f(r['o1_share_orders_reaching_best_mean'])}) & -- & "
+                         f"{r['n_predictions']} & {r['n_instances']} & -- & {_pm(r['cost_jointdw_mean'], r['cost_jointdw_se'])} "
+                         f"& -- & {_f(r['mean_evaluations_covering'])} \\\\")
+            else:
+                q = (str(r["stage_queries_0_to_e_min"]) if r["stage_queries_0_to_e_min"] == r["stage_queries_0_to_e_max"]
+                     else f"{r['stage_queries_0_to_e_min']}--{r['stage_queries_0_to_e_max']}")
+                L.append(f"{head} & {r['e']} & {r['best_set_size']} & {r['n_predictions']} & {r['n_instances']} & "
+                         f"{_pm(r['cost_o1_mean'], r['cost_o1_se'])} & {_pm(r['cost_jointdw_mean'], r['cost_jointdw_se'])} & "
+                         f"{q} & {_f(r['mean_evaluations_covering'])} \\\\")
+    return "\n".join(L) + "\n"
+
+
+def answers_scored_rows(set_label: str, insts: list, recs: dict) -> list:
+    """One row per answer: instance, configuration, presentation, sample; whether it parses; the joint supports as
+    parsed and matched to the families, in the order of the answer; the first one; the anchor P before the cut; whether
+    the first joint support is a true group and the recall (analyze_support.score, the instances with a joint support);
+    on an instance without a joint support whether the answer is a false alarm (no budget applies to these models)."""
+    by = {i["name"]: i for i in insts}
+    out = []
+    for (cfg, pres), rs in recs.items():
+        for r in rs:
+            t = by[r["instance"]]["truth"]
+            fams = frozenset(t["families"])
+            sc = analyze_support.score(r, {**t, "table": {}})
+            sup = [frozenset(x.get("families") or []) & fams for x in r.get("supports") or []]
+            out.append({"set": set_label, "class": by[r["instance"]]["class"], "k": by[r["instance"]]["k"],
+                        "instance": r["instance"], "configuration": cfg, "presentation": pres,
+                        "sample": r.get("sample", 0), "status": r.get("status"),
+                        "parses": r.get("status") not in ("missing", "unparseable"),
+                        "joint_supports": " ; ".join(_key(x) for x in sup), "first_joint_support": _key(sup[0]) if sup else "",
+                        "anchor": _key(results.support_anchor(r, sorted(fams))),
+                        "first_is_true_group": sc.get("joint_hit1"), "recall": sc.get("joint_recall"),
+                        "false_alarm": sc.get("joint_false"), "set_outside_budget": None})
+    return out
+
+
 # ---------------------------------------------------------------- table bodies
 
 def _f(x, d=2):
@@ -708,6 +911,9 @@ def run(args) -> dict:
     status = [{"set": SET_E, **r} for r in E["status"]]
     fig = cost_vs_k_rows(SET_E, insts, vals)
     mis = misses_rows(SET_E, insts, E["rows"], vals)
+    cut_per = misses_per_prediction(SET_E, insts, E["recs"])
+    cut_agg = misses_aggregates(cut_per)
+    scored = answers_scored_rows(SET_E, insts, E["recs"])
     if args.published:
         pub = Path(args.published).expanduser()
         set_groups_of_set(published_groups(pub))
@@ -716,6 +922,10 @@ def run(args) -> dict:
         status += [{"set": SET_PUBLISHED, **r} for r in P["status"]]
         fig = cost_vs_k_rows(SET_PUBLISHED, P["insts"], P["vals"]) + fig
         mis = misses_rows(SET_PUBLISHED, P["insts"], P["rows"], P["vals"]) + mis
+        p_per = misses_per_prediction(SET_PUBLISHED, P["insts"], P["recs"])
+        cut_agg = misses_aggregates(p_per) + cut_agg
+        cut_per = p_per + cut_per
+        scored = answers_scored_rows(SET_PUBLISHED, P["insts"], P["recs"]) + scored
     out.mkdir(parents=True, exist_ok=True)
     gdir = out / "gain_tables"
     gdir.mkdir(exist_ok=True)
@@ -740,6 +950,12 @@ def run(args) -> dict:
     (tex / "experiment_E_paired.tex").write_text(tex_paired(p5, pc, gl, partial), encoding="utf-8")
     results.write_csv(figd / "experiment_E_cost_vs_k.csv", fig)
     results.write_csv(figd / "search_cost_vs_misses.csv", mis)
+    results.write_csv(figd / "search_cost_vs_misses_after_cut.csv", cut_agg)
+    mdir = Path(args.misses_dir).expanduser() if getattr(args, "misses_dir", None) else out.parent / "rich_models"
+    mdir.mkdir(parents=True, exist_ok=True)
+    results.write_csv(mdir / "misses_per_prediction.csv", cut_per)
+    results.write_csv(out / "answers_scored.csv", scored)
+    (tex / "search_cost_vs_misses_after_cut.tex").write_text(tex_misses_after_cut(cut_agg), encoding="utf-8")
     return {"status": status, "instances": inst_rows, "predictions": pred, "search": srch, "paired_five_dual": p5,
             "paired_covering": pc, "cost_vs_k": fig, "misses": mis}
 
@@ -751,6 +967,7 @@ def main(argv=None) -> int:
     ap.add_argument("--out", required=True)
     ap.add_argument("--tex-dir", help="folder of the table bodies (default <out>/tables/new)")
     ap.add_argument("--figure-dir", help="folder of the figure data (default <out>/figures/data)")
+    ap.add_argument("--misses-dir", help="folder of misses_per_prediction.csv (default <out>/../rich_models)")
     ap.add_argument("--configs", default=",".join(CONFIGS), help="model identifiers, comma-separated")
     ap.add_argument("--answered-only", action="store_true",
                     help="score only the answer cells with a file (missing cells are left out, not failed)")

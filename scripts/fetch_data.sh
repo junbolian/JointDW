@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 URL="${JOINTDW_DATA_URL:-https://github.com/junbolian/JointDW/releases/download/v1.2}"
 NAME=jointdw_data_v1.2.tar.gz
-EXPECTED=4cc28557f078f77c2fde9f045a311197ab6307ab49490aaa1eaea42daa28c831
+EXPECTED=b23399b2b3a987467277ab78158d31119bae437a4a03a244df7fa8456d9b1ed5
 mkdir -p data
 curl -fsSL -o "data/$NAME" "$URL/$NAME"
 python - "data/$NAME" "$EXPECTED" <<'PY'

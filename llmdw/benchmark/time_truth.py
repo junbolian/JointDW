@@ -262,6 +262,15 @@ def rank_key(sm: dict):
     return (-sm["solved_seeds"], sm["time_stat"], 0.0)
 
 
+def within_tolerance(fam: dict, order: list, best: str) -> list:
+    """The sets within tolerance of the time-optimal set best: every set of order that solves on as many seeds as best
+    and whose time statistic is at most 1.1 times that of best, also when best solves on no seed (then every set unsolved
+    on every seed lies within tolerance). One rule for the time-optimal decompositions and the time-optimal set within
+    the budget; over all sets the time-optimal set solves on at least one seed on every benchmark instance."""
+    return [k for k in order if fam[k]["solved_seeds"] == fam[best]["solved_seeds"]
+            and fam[k]["time_stat"] <= (1 + TOLERANCE) * fam[best]["time_stat"]]
+
+
 def time_truth(rows: list, root: Path, exclude: dict | None = None) -> dict:
     """Per instance: the summary of every set and reference, the time-optimal set, the sets within tolerance, and the
     bound-optimal set (recomputed from the gain table under z*, llmdw.benchmark.validity.bound_optimal; it equals the
@@ -280,8 +289,7 @@ def time_truth(rows: list, root: Path, exclude: dict | None = None) -> dict:
         fam = {k: v for k, v in sm.items() if k not in REFERENCES and k not in skip}
         order = sorted(fam, key=lambda k: (rank_key(fam[k]), len(k.split("|")), k))
         best = order[0]
-        tol = [k for k in order if fam[k]["solved_seeds"] == fam[best]["solved_seeds"] and fam[best]["solved_seeds"] > 0
-               and fam[k]["time_stat"] <= (1 + TOLERANCE) * fam[best]["time_stat"]] or [best]
+        tol = within_tolerance(fam, order, best)
         plan = json.loads((root / "instances" / n / "bnp_plan.json").read_text())
         planned = bnp.set_key(plan["methods"]["true_best"])
         bound_best, ties = validity.bound_optimal(validity.oracle_with_reference(root / "instances" / n),
@@ -329,14 +337,20 @@ def method_values(root: Path, truth: dict, configs: list, data_configs: list) ->
     return out
 
 
-def measure_tables(root: Path, names: list, truth: dict, configs: list, data_configs: list, groups: dict) -> dict:
+def measure_tables(root: Path, names: list, truth: dict, configs: list, data_configs: list, groups: dict,
+                   mv: dict | None = None, extra_methods: tuple = (), pairs: list | None = None,
+                   quantities: tuple = ("hit_strict", "hit_tolerance", "log_ratio")) -> dict:
+    """Per class and pooled: hit@1 (strict, within tolerance) and the time ratio of every method, and the paired
+    differences. mv: per-instance values (default method_values); extra_methods come first; pairs default to JointDW
+    (each configuration) minus each baseline and the five-dual lookahead minus GCG's detector; a pair that involves a
+    data-variant configuration is bootstrapped over instances."""
     import math
 
     from llmdw.scoring import cluster, results
 
     cls = {n: json.loads((root / "instances" / n / "meta.json").read_text())["class"] for n in names}
-    mv = method_values(root, truth, configs, data_configs)
-    methods = list(BASELINES) + configs + data_configs
+    mv = mv if mv is not None else method_values(root, truth, configs, data_configs)
+    methods = list(extra_methods) + list(BASELINES) + configs + data_configs
 
     def boot(values, data_variant):
         cluster.set_groups({} if data_variant else groups)
@@ -371,10 +385,11 @@ def measure_tables(root: Path, names: list, truth: dict, configs: list, data_con
                         "time_ratio_hi": math.exp(b["hi"]) if b["hi"] is not None else None,
                         "se_log_ratio": b["se"], "n_ratio": b["n"], "n_groups_ratio": b["groups"]})
             meth.append(row)
-        pairs = [(a, b) for a in configs + data_configs for b in BASELINES] + [("lookahead (five duals)", "GCG default")]
-        for a, b in pairs:
-            dv = a in data_configs
-            for q in ("hit_strict", "hit_tolerance", "log_ratio"):
+        plist = pairs if pairs is not None else ([(a, b) for a in configs + data_configs for b in BASELINES]
+                                                 + [("lookahead (five duals)", "GCG default")])
+        for a, b in plist:
+            dv = a in data_configs or b in data_configs
+            for q in quantities:
                 d = {n: mv[n][a][q] - mv[n][b][q] for n in ns
                      if mv[n][a][q] is not None and mv[n][b][q] is not None}
                 bb = boot(d, dv)
@@ -384,6 +399,100 @@ def measure_tables(root: Path, names: list, truth: dict, configs: list, data_con
                                "bootstrap": "instances" if dv else "prompt groups, then instances within them"})
     cluster.set_groups(groups)
     return {"methods": meth, "paired": paired, "values": mv}
+
+
+# ---------------------------------------------------------------- the time-optimal set within the budget
+
+BUDGET = 2                      # sets of at most k - 1 = 2 families: the set of all three leaves an empty master
+BEST_PAIR = "best pair"
+
+
+def time_truth_budget(rows: list, root: Path, budget: int = BUDGET) -> dict:
+    """Per instance: the ranking of the sets of at most budget families (rank_key; ties by fewer families, then name),
+    the time-optimal set within the budget (the first of the ranking), the sets within tolerance (within_tolerance) and
+    the bound-optimal set (llmdw.benchmark.validity.bound_optimal). The summaries of every set and reference stay, so a
+    method whose set lies outside the budget is a miss and keeps its own time."""
+    from llmdw.benchmark import validity
+
+    by = {}
+    for r in rows:
+        by.setdefault(r["instance"], {}).setdefault(r["set"], []).append(r)
+    out = {}
+    for n, sets in by.items():
+        sm = {k: set_summary(v) for k, v in sets.items()}
+        fam = {k: v for k, v in sm.items() if k not in REFERENCES and len(k.split("|")) <= budget}
+        order = sorted(fam, key=lambda k: (rank_key(fam[k]), len(k.split("|")), k))
+        best = order[0]
+        bo, ties = validity.bound_optimal(validity.oracle_with_reference(root / "instances" / n))
+        out[n] = {"summary": sm, "order": order, "time_optimal": best, "within_tolerance": within_tolerance(fam, order, best),
+                  "bound_optimal": bo, "bound_optimal_ties": ties, "coincide": bo == best}
+    return out
+
+
+def method_values_budget(root: Path, truth: dict, configs: list, data_configs: list) -> dict:
+    """method_values against the time-optimal set within the budget, with the bound-optimal set ("best pair") as a
+    reference method."""
+    import math
+
+    mv = method_values(root, truth, configs, data_configs)
+    for n, t in truth.items():
+        k, sm = t["bound_optimal"], t["summary"]
+        mv[n][BEST_PAIR] = {"hit_strict": float(k == t["time_optimal"]), "hit_tolerance": float(k in t["within_tolerance"]),
+                            "log_ratio": math.log(sm[k]["time_stat"] / sm[t["time_optimal"]]["time_stat"])}
+    return mv
+
+
+def budget_pairs(configs: list, data_configs: list) -> list:
+    """JointDW (original presentation) minus each baseline, the five-dual lookahead minus GCG's detector, and each
+    configuration under the coefficient presentation minus the same configuration under the original presentation."""
+    out = [(a, b) for a in configs for b in BASELINES] + [("lookahead (five duals)", "GCG default")]
+    return out + [(d, d[:-len(", data")]) for d in data_configs if d[:-len(", data")] in configs]
+
+
+def tradeoff_budget(truth: dict, cls: dict) -> list:
+    """Per class, for the best pair, the other pairs, the single families and the set of all three families: the number
+    of sets, the share of solved runs, the mean time statistic, the mean pricing share and the mean number of nodes
+    (both empty for the set of all three families, whose master is empty)."""
+    kinds = {"best pair": lambda t, k: k == t["bound_optimal"],
+             "other pairs": lambda t, k: k.count("|") == 1 and k != t["bound_optimal"],
+             "single families": lambda t, k: "|" not in k,
+             "all three families": lambda t, k: k.count("|") == 2}
+    out = []
+    for c in CLASSES:
+        ts = [t for n, t in truth.items() if cls[n] == c]
+        for g, pick in kinds.items():
+            sets = [t["summary"][k] for t in ts for k in t["summary"] if k not in REFERENCES and pick(t, k)]
+            if not sets:
+                continue
+            row = {"class": c, "sets": g, "n_sets": len(sets),
+                   "share_solved_runs": sum(x["solved_seeds"] for x in sets) / (len(SEEDS) * len(sets)),
+                   "time_stat_mean": sum(x["time_stat"] for x in sets) / len(sets)}
+            for q in ("pricing_share", "nodes"):
+                v = [x[q] for x in sets if x[q] is not None]
+                row[f"{q}_mean"] = None if g == "all three families" or not v else sum(v) / len(v)
+            out.append(row)
+    return out
+
+
+def budget_outputs(root: Path, names: list, rows: list, configs: list, data_configs: list, groups: dict,
+                   out: Path) -> dict:
+    """time_truth_budget.csv, methods_time_budget.csv, paired_time_truth_budget.csv and tradeoff_budget.csv."""
+    cls = {n: json.loads((root / "instances" / n / "meta.json").read_text())["class"] for n in names}
+    truth = time_truth_budget(rows, root)
+    _write(out / "time_truth_budget.csv", [
+        {"instance": n, "class": cls[n], "time_optimal": t["time_optimal"],
+         "time_stat": t["summary"][t["time_optimal"]]["time_stat"],
+         "solved_seeds": t["summary"][t["time_optimal"]]["solved_seeds"], "within_tolerance": " ".join(t["within_tolerance"]),
+         "bound_optimal": t["bound_optimal"], "coincide": t["coincide"], "order": " ".join(t["order"])}
+        for n, t in truth.items()])
+    mv = method_values_budget(root, truth, configs, data_configs)
+    res = measure_tables(root, names, truth, configs, data_configs, groups, mv=mv, extra_methods=(BEST_PAIR,),
+                         pairs=budget_pairs(configs, data_configs), quantities=("hit_strict", "log_ratio"))
+    _write(out / "methods_time_budget.csv", res["methods"])
+    _write(out / "paired_time_truth_budget.csv", res["paired"])
+    trade = tradeoff_budget(truth, cls)
+    _write(out / "tradeoff_budget.csv", trade)
+    return {"truth": truth, **res, "tradeoff": trade}
 
 
 def tradeoff(truth: dict, cls: dict) -> tuple:
@@ -523,6 +632,7 @@ def main(argv=None) -> int:
         fig, agg = tradeoff(truth, cls)
         _write(out / "tradeoff_by_class.csv", agg)
         _write(out / "figure_data" / "experiment_D_tradeoff.csv", fig)
+        budget_outputs(root, names, rows, list(answers), args.data_configs, groups, out)
         tex = Path(args.tex_dir) if args.tex_dir else out / "tables" / "new"
         tex.mkdir(parents=True, exist_ok=True)
         tex_bodies(out, tex)

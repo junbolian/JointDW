@@ -1,0 +1,40 @@
+\multicolumn{6}{@{}l}{\emph{Lot sizing, 20 instances}} \\
+GPT-6.1 Sol & 1.00 $\pm$ 0.00 & 0.964 $\pm$ 0.005 & 0.95 $\pm$ 0.05 & 1.000 $\pm$ 0.000 & 0 \\
+Claude Sonnet 5.5 & 0.95 $\pm$ 0.03 & 0.934 $\pm$ 0.020 & 0.90 $\pm$ 0.05 & 0.994 $\pm$ 0.076 & 1 \\
+\multicolumn{6}{@{}l}{\emph{Network design, 20 instances}} \\
+GPT-6.1 Sol & 0.40 $\pm$ 0.07 & 0.688 $\pm$ 0.049 & 0.37 $\pm$ 0.07 & 7.658 $\pm$ 3.665$^{*}$ & 0 \\
+Claude Sonnet 5.5 & 0.17 $\pm$ 0.06 & 0.514 $\pm$ 0.065 & 0.13 $\pm$ 0.04 & 10.777 $\pm$ 5.153$^{*}$ & 0 \\
+\multicolumn{6}{@{}l}{\emph{Facility location, 19 instances}} \\
+GPT-6.1 Sol & 0.95 $\pm$ 0.03 & 0.947 $\pm$ 0.028 & 0.65 $\pm$ 0.11 & 1.097 $\pm$ 0.041$^{*}$ & 0 \\
+Claude Sonnet 5.5 & 0.58 $\pm$ 0.06 & 0.596 $\pm$ 0.062 & 0.37 $\pm$ 0.08 & 1.641 $\pm$ 0.167$^{*}$ & 17 \\
+\multicolumn{6}{@{}l}{\emph{All instances, 59 instances}} \\
+GPT-6.1 Sol & 0.78 $\pm$ 0.04 & 0.865 $\pm$ 0.025 & 0.66 $\pm$ 0.05 & 2.054 $\pm$ 0.419$^{*}$ & 0 \\
+Claude Sonnet 5.5 & 0.56 $\pm$ 0.05 & 0.683 $\pm$ 0.039 & 0.47 $\pm$ 0.05 & 2.620 $\pm$ 0.567$^{*}$ & 18 \\
+% bottom
+\multicolumn{5}{@{}l}{\emph{Network design, 20 instances}} \\
+GPT-6.1 Sol & Lookahead (HiGHS dual) & 0.05 $\pm$ 0.15 & 0.059 $\pm$ 0.099 & 0.48 $\pm$ 0.45 \\
+ & Lookahead (five duals) & 0.05 $\pm$ 0.15 & 0.046 $\pm$ 0.096 & 0.56 $\pm$ 0.56 \\
+ & GCG's detector & 0.40 $\pm$ 0.07$^{*}$ & 0.685 $\pm$ 0.049$^{*}$ & 0.63 $\pm$ 0.39 \\
+ & Original presentation & $-$0.27 $\pm$ 0.10$^{*}$ & $-$0.120 $\pm$ 0.052$^{*}$ & 1.38 $\pm$ 0.45$^{*}$ \\
+Claude Sonnet 5.5 & Lookahead (HiGHS dual) & $-$0.18 $\pm$ 0.10 & $-$0.114 $\pm$ 0.065 & 0.82 $\pm$ 0.38$^{*}$ \\
+ & Lookahead (five duals) & $-$0.18 $\pm$ 0.11 & $-$0.127 $\pm$ 0.062$^{*}$ & 0.90 $\pm$ 0.47$^{*}$ \\
+ & GCG's detector & 0.17 $\pm$ 0.06$^{*}$ & 0.511 $\pm$ 0.066$^{*}$ & 0.98 $\pm$ 0.38$^{*}$ \\
+ & Original presentation & $-$0.58 $\pm$ 0.08$^{*}$ & $-$0.313 $\pm$ 0.071$^{*}$ & 1.81 $\pm$ 0.40$^{*}$ \\
+\multicolumn{5}{@{}l}{\emph{Facility location, 19 instances}} \\
+GPT-6.1 Sol & Lookahead (HiGHS dual) & 0.26 $\pm$ 0.11$^{*}$ & 0.263 $\pm$ 0.110$^{*}$ & $-$0.46 $\pm$ 0.38$^{*}$ \\
+ & Lookahead (five duals) & 0.00 $\pm$ 0.06 & 0.000 $\pm$ 0.060 & $-$0.02 $\pm$ 0.02$^{*}$ \\
+ & GCG's detector & 0.95 $\pm$ 0.03$^{*}$ & 0.947 $\pm$ 0.028$^{*}$ & $-$1.15 $\pm$ 0.12$^{*}$ \\
+ & Original presentation & $-$0.05 $\pm$ 0.03 & $-$0.053 $\pm$ 0.028 & 0.00 $\pm$ 0.00 \\
+Claude Sonnet 5.5 & Lookahead (HiGHS dual) & $-$0.11 $\pm$ 0.14 & $-$0.088 $\pm$ 0.139 & $-$0.06 $\pm$ 0.39 \\
+ & Lookahead (five duals) & $-$0.37 $\pm$ 0.08$^{*}$ & $-$0.351 $\pm$ 0.082$^{*}$ & 0.38 $\pm$ 0.11$^{*}$ \\
+ & GCG's detector & 0.58 $\pm$ 0.06$^{*}$ & 0.596 $\pm$ 0.062$^{*}$ & $-$0.75 $\pm$ 0.13$^{*}$ \\
+ & Original presentation & $-$0.11 $\pm$ 0.07 & $-$0.088 $\pm$ 0.063 & 0.14 $\pm$ 0.08 \\
+\multicolumn{5}{@{}l}{\emph{All instances, 59 instances}} \\
+GPT-6.1 Sol & Lookahead (HiGHS dual) & 0.10 $\pm$ 0.06 & 0.105 $\pm$ 0.051$^{*}$ & 0.01 $\pm$ 0.20 \\
+ & Lookahead (five duals) & 0.02 $\pm$ 0.06 & 0.016 $\pm$ 0.038 & 0.18 $\pm$ 0.19 \\
+ & GCG's detector & 0.44 $\pm$ 0.06$^{*}$ & 0.537 $\pm$ 0.055$^{*}$ & $-$0.11 $\pm$ 0.17 \\
+ & Original presentation & $-$0.11 $\pm$ 0.04$^{*}$ & $-$0.058 $\pm$ 0.021$^{*}$ & 0.47 $\pm$ 0.17$^{*}$ \\
+Claude Sonnet 5.5 & Lookahead (HiGHS dual) & $-$0.11 $\pm$ 0.06$^{*}$ & $-$0.077 $\pm$ 0.051 & 0.26 $\pm$ 0.19 \\
+ & Lookahead (five duals) & $-$0.20 $\pm$ 0.05$^{*}$ & $-$0.166 $\pm$ 0.039$^{*}$ & 0.43 $\pm$ 0.17$^{*}$ \\
+ & GCG's detector & 0.23 $\pm$ 0.05$^{*}$ & 0.355 $\pm$ 0.048$^{*}$ & 0.13 $\pm$ 0.17 \\
+ & Original presentation & $-$0.25 $\pm$ 0.05$^{*}$ & $-$0.145 $\pm$ 0.036$^{*}$ & 0.65 $\pm$ 0.18$^{*}$ \\

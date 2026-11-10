@@ -73,7 +73,8 @@ described in `DATA.md`; the commands are in `scripts/rerun.sh` (solver runs) and
 | bound-optimal set | a set of maximal gain among the evaluated sets within the budget (gain values within 1e-9 tied; ties by fewer families, then name); on an instance where every set has gain 0 nothing is scored against it |
 | time statistic | the geometric mean over seeds 0, 1 and 2 of t + 1 s, t the total time, an unsolved run at 1801 s |
 | time-optimal set | the first set in the order: more seeds solved first; then the smaller time statistic; among sets unsolved on every seed, the smaller mean final gap; on the classes without a joint group among the planned sets within the budget |
-| time-optimal set within tolerance | every set that solves on as many seeds as the time-optimal set and whose time statistic is within 10 percent of it |
+| time-optimal set within tolerance | every set that solves on as many seeds as the time-optimal set and whose time statistic is at most 1.1 times its time statistic; when no set solves on any seed, every set lies within tolerance (one rule for every time-optimal set below) |
+| time-optimal set within the budget | on the benchmark instances, the first set of the same ranking among the sets of at most two families (k - 1): the set of all three families leaves an empty master, so its pricing problem is the program itself, and the census and the gain tables exclude it as well; a method whose set has all three families is a miss and keeps its own time; the bound-optimal set ("best pair") is reported as a reference method |
 | budget | each evaluation convexifies at most k - 1 families (the sets of the gain table); a method's first set beyond it has gain 0 in every pooled gain and is counted in its own column |
 
 ## Search costs and statistics
@@ -82,7 +83,9 @@ described in `DATA.md`; the commands are in `scripts/rerun.sh` (solver runs) and
 |---|---|
 | family orders | 1,000 random orders of the families per instance, seed 0 (keyed by the instance name) |
 | size limits | s = 2, 3 and k - 1 (s = min(s, k - 1) where k - 1 is smaller) |
-| staged order of JointDW | anchored at the first predicted joint support, or else at the families convexified by the top-ranked reformulation; an anchor with more than s families keeps its first s families in the family order; alternated with the covering order |
+| staged order of JointDW | anchored at the first predicted joint support, or else at the families convexified by the top-ranked reformulation; an anchor with more than s families keeps its first s families in the family order (the staged order O1) |
+| alternation | the JointDW order takes the entries of O1 and of the covering order O2 in turn, and an entry that was already evaluated (or lies outside the gain table) is skipped; the interleaved orders take the entries of the JointDW order and of the lookahead order in turn in the same way; a cost is the number of evaluations until a set of maximal gain is evaluated |
+| misses | e = min over the minimal best sets W of the number of families of W outside the anchor, counted on the anchor that the search uses (after the cut to s families); stage e of O1 covers every combination of all but e families of the anchor P with e other families, so O1 reaches a best set W within stages 0 to e when W has at most as many families as P |
 | coverings | greedy: at each step the first set, in the lexicographic order of positions in the family order, among the sets that cover the most uncovered subsets |
 | bootstrap | two stages: prompt groups with replacement, then the instances within each drawn group with replacement; instances with byte-identical prompts form one prompt group and are drawn together; 10,000 resamples, seed 0; 95 percent percentile intervals; an asterisk when the interval of a difference excludes 0 |
 | time ratios | geometric mean over instances, standard error of the mean log ratio times the geometric mean |

@@ -551,6 +551,41 @@ def _label(m: str, configs: list) -> str:
     return f"JointDW, {m}" if m in configs else METHOD_NAMES.get(m, m)
 
 
+def answers_scored(root: Path, names: list, answers: dict, info: dict) -> list:
+    """One row per answer of the original presentation: instance, configuration, sample; whether it parses; the joint
+    supports as parsed and matched to the families (in the order of the answer); the first one; the anchor P before the
+    cut; whether the first joint support is a true group and the recall (no instance of these classes has a joint
+    support within the budget, so both are empty); whether the answer is a false alarm and whether its first support and
+    its set (the anchor) lie outside the budget (support_outcome). The answer files are read as results.load_answers
+    reads them (a missing file is a missing answer)."""
+    from llmdw.scoring import results
+
+    out = []
+    for n in names:
+        fams = info[n]["families"]
+        for cfg, adir in answers.items():
+            for smp in range(results.SAMPLES):
+                f = results.result_path(Path(adir), n, "original", smp)
+                if f.exists():
+                    r = json.loads(f.read_text(encoding="utf-8"))
+                    r["status"] = "answered" if r.get("answer") is not None else "unparseable"
+                else:
+                    r = {"instance": n, "condition": "original", "sample": smp, "supports": [], "candidates": [],
+                         "status": "missing"}
+                sup = [frozenset(x.get("families") or []) & frozenset(fams) for x in r.get("supports") or []]
+                P = results.support_anchor(r, fams)
+                outcome = support_outcome(sorted(sup[0]) if sup else None, info[n])
+                out.append({"class": info[n]["class"], "instance": n, "configuration": cfg, "presentation": "original",
+                            "sample": smp, "status": r.get("status"),
+                            "parses": r.get("status") not in ("missing", "unparseable"),
+                            "joint_supports": " ; ".join(bnp.set_key(x) for x in sup),
+                            "first_joint_support": bnp.set_key(sup[0]) if sup else "", "anchor": bnp.set_key(P),
+                            "first_is_true_group": None, "recall": None, "false_alarm": outcome == "false alarm",
+                            "support_outside_budget": outcome == "outside budget",
+                            "set_outside_budget": bnp.set_key(P) in info[n]["outside"]})
+    return out
+
+
 def score(root: Path, names: list, answers: dict, groups_csv: Path, out: Path, tex_dir: Path | None,
           expected_not_scored=NOT_SCORED_EXPECTED) -> dict:
     """The scoring of the module docstring; returns the tables and the counts of the runs. expected_not_scored: the
@@ -643,6 +678,7 @@ def score(root: Path, names: list, answers: dict, groups_csv: Path, out: Path, t
     body, rec = tex_paired(tabs["paired"], tabs["paired_time_truth"], configs, partial)
     (tex / "experiment_F_paired.tex").write_text(body, encoding="utf-8")
     rec.write(out / "cells" / "experiment_F_paired.csv")
+    time_truth._write(out / "answers_scored.csv", answers_scored(root, names, answers, info))
     return {"tables": tabs, "status": status, "not_scored": not_scored, "complete": complete}
 
 
