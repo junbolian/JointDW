@@ -23,8 +23,8 @@ results (llmdw.tables.paper_v1.compare_with_paper): the tables whose layout the 
 position against the reference body, the other tables by looking for every printed number, at its printed precision,
 among the values of the result CSVs it comes from. Every difference is written to the report and fails the test,
 except the cells declared as derived from the instance lists (paper_v1.DERIVED). Nothing of the paper is kept in this
-repository. JOINTDW_PAPER_VERSION names the version of the paper source: 1.1.4 (the default), 1.1.3 and 1.1, which
-have the same table bodies, or 1.0, whose benchmark tables print earlier standard errors, which are then reported
+repository. JOINTDW_PAPER_VERSION names the version of the paper source: 1.1.5 (the default; it adds Table 31,
+tab:app-first), 1.1.4, 1.1.3 and 1.1, which have the same bodies of Tables 1 to 30, or 1.0, whose benchmark tables print earlier standard errors, which are then reported
 but allowed.
 
 The derived cells of the instance tables (tab:rich-inst, tab:rich-large-inst, tab:bench-inst) are recomputed from the
@@ -32,6 +32,11 @@ instance files and the gain tables in data/work (llmdw.tables.paper_v1.instance_
 tests/reference/instance_cells.json, which the same function wrote, and with the result CSVs that hold the same
 quantity per instance; with JOINTDW_PAPER_TEX, every cell of their derived columns is compared with the paper
 (paper_v1.compare_instance_cells), and every cell of paper_v1.DERIVED must be among the cells compared.
+
+The first sets of the language models against those of the lookahead orders and the interleaved order against its two
+sources (llmdw.scoring.first_sets, results/first_sets/) are compared with tests/reference/first_sets byte for byte, and
+the body of Table 31 (tab_app_first.tex), rebuilt from first_sets.csv and as written by scripts/reproduce.sh, with
+tests/reference/experiments/tab_app_first.tex; with JOINTDW_PAPER_TEX, Table 31 is compared by position as well.
 """
 import csv
 import json
@@ -80,13 +85,14 @@ LATER_BODIES = {
 PAPER_V1_NAMES = ["tab_bench.tex", "tab_app_bench.tex", "tab_app_bench_time.tex", "tab_app_tradeoff.tex",
                   "tab_app_bench_data.tex", "tab_app_misses.tex", "tab_app_larger.tex", "tab_instances.tex"]
 MISSES_NAMES = ["search_cost_vs_misses_after_cut.tex"]
+FIRST_NAMES = ["tab_app_first.tex"]                       # written by llmdw.scoring.first_sets
 LATER_NAMES = sorted([n for _, names in LATER_BODIES.values() for n in names] + PAPER_V1_NAMES + MISSES_NAMES)
 LATER_SOURCES = [p for p in SOURCES if all((p / d).is_dir() for d in LATER_BODIES)
                  and (p / "paper" / "figure_data" / "search_cost_vs_misses_after_cut.csv").exists()]
 PAPER_TEX = os.environ.get("JOINTDW_PAPER_TEX")
 # the version of the paper source and the tables whose standard errors may differ from this release
-PAPER_VERSIONS = {"1.0": paper_v1.STANDARD_ERRORS_BEFORE_V1_1, "1.1": (), "1.1.3": (), "1.1.4": ()}
-PAPER_VERSION = os.environ.get("JOINTDW_PAPER_VERSION", "1.1.4")
+PAPER_VERSIONS = {"1.0": paper_v1.STANDARD_ERRORS_BEFORE_V1_1, "1.1": (), "1.1.3": (), "1.1.4": (), "1.1.5": ()}
+PAPER_VERSION = os.environ.get("JOINTDW_PAPER_VERSION", "1.1.5")
 WORK = ROOT / "data" / "work"
 HAS_INSTANCES = all((WORK / p).exists() for p in ("rich_models/instances.txt", "rich_models_large/instances.txt",
                                                   "benchmark_std/full_set/all_instances.txt"))
@@ -105,7 +111,8 @@ def test_paper_table_bodies(source):
 @pytest.mark.parametrize("source", EXPERIMENT_SOURCES, ids=lambda p: p.name)
 def test_experiment_table_bodies(source, tmp_path):
     names = experiments.write_tables(source, tmp_path)
-    assert sorted(names) == sorted(p.name for p in (REFERENCE / "experiments").glob("*.tex") if p.name not in LATER_NAMES)
+    assert sorted(names) == sorted(p.name for p in (REFERENCE / "experiments").glob("*.tex")
+                                   if p.name not in LATER_NAMES + FIRST_NAMES)
     for name in names:
         _compare((tmp_path / name).read_text(encoding="utf-8"),
                  (REFERENCE / "experiments" / name).read_text(encoding="utf-8"), name)
@@ -241,3 +248,20 @@ def test_derived_cells_of_the_instance_tables_of_the_paper(tmp_path):
             print(lab, d)
     assert [d for r in report.values() for d in r["differences"]] == []
     assert [d for r in report.values() for d in r["derived_not_checked"]] == []
+
+
+FIRST_SOURCES = [p for p in SOURCES if (p / "first_sets" / "first_sets.csv").exists()]
+
+
+@pytest.mark.skipif(not FIRST_SOURCES, reason="no released data v1.2.1: run scripts/fetch_data.sh first")
+@pytest.mark.parametrize("source", FIRST_SOURCES, ids=lambda p: p.name)
+def test_first_sets_and_table_31(source, tmp_path):
+    from llmdw.scoring import first_sets
+
+    for name in ("first_sets.csv", "evaluations_paired.csv"):
+        assert (source / "first_sets" / name).read_bytes() == (REFERENCE / "first_sets" / name).read_bytes(), name
+    first_sets.tex_from_csv(source / "first_sets", tmp_path)
+    expected = (REFERENCE / "experiments" / "tab_app_first.tex").read_text(encoding="utf-8")
+    _compare((tmp_path / "tab_app_first.tex").read_text(encoding="utf-8"), expected, "tab_app_first.tex (rebuilt)")
+    written = source / "paper" / "experiments" / "tab_app_first.tex"
+    _compare(written.read_text(encoding="utf-8"), expected, "tab_app_first.tex (as written)")

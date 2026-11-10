@@ -97,7 +97,7 @@ pip install -e ".[test]"        # the tests, with every other extra
 scripts/fetch_data.sh
 ```
 
-downloads `jointdw_data_v1.2.tar.gz` (117.6 MB), the asset of the release [v1.2](https://github.com/junbolian/JointDW/releases/tag/v1.2), into `data/` and checks the SHA-256 recorded in the script. The release supersedes v1.1.1, v1.1 and v1.0. The archive holds:
+downloads `jointdw_data_v1.2.1.tar.gz` (117.7 MB), the asset of the release [v1.2.1](https://github.com/junbolian/JointDW/releases/tag/v1.2.1), into `data/` and checks the SHA-256 recorded in the script. The release supersedes v1.1.1, v1.1 and v1.0. The archive holds:
 
 - the instances and their gain tables: templates, rich models, MIPLIB-NL, benchmark instances, generalized assignment and bin packing;
 - the lookahead values at one and at five duals;
@@ -117,7 +117,7 @@ scripts/reproduce.sh         # writes results/ and results/paper/
 scripts/compare_results.sh   # compares them with data/reference_results/
 ```
 
-`scripts/reproduce.sh` reads only `data/`, sends no request to a language model and needs no solver. It writes the table bodies and figure data of the paper to `results/paper/` and the result tables behind them to `results/`. [docs/OUTPUTS.md](docs/OUTPUTS.md) lists the result file of each of Figures 1 to 5 and Tables 1 to 30, the modules that the script runs, and the constants of the search costs and the bootstrap.
+`scripts/reproduce.sh` reads only `data/`, sends no request to a language model and needs no solver. It writes the table bodies and figure data of the paper to `results/paper/` and the result tables behind them to `results/`. [docs/OUTPUTS.md](docs/OUTPUTS.md) lists the result file of each of Figures 1 to 5 and Tables 1 to 31, the modules that the script runs, and the constants of the search costs and the bootstrap.
 
 On a fresh clone (one workstation, Python 3.13), `scripts/compare_results.sh` found all 328 result files identical to the released ones.
 
@@ -130,7 +130,7 @@ On a fresh clone (one workstation, Python 3.13), `scripts/compare_results.sh` fo
 | tests | 27 s |
 | `scripts/reproduce.sh` | 66 min |
 
-`tests/test_paper_tables.py` rebuilds every table body from the released results and compares it with the reference bodies in `tests/reference/`. With `JOINTDW_PAPER_TEX` set to the LaTeX source of the paper, it also compares every table body of the paper with these results.
+`tests/test_paper_tables.py` rebuilds every table body from the released results and compares it with the reference bodies in `tests/reference/`. With `JOINTDW_PAPER_TEX` set to the LaTeX source of the paper, it also compares every table body of the paper with these results. With `JOINTDW_SLOW_TESTS=1`, `tests/test_staged_cover_bounds.py` also checks the bounds of the staged search (Theorem 2); it needs SciPy, which the extra `learned` installs.
 
 ## Running the language models
 

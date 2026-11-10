@@ -90,6 +90,7 @@ described in `DATA.md`; the commands are in `scripts/rerun.sh` (solver runs) and
 | bootstrap | two stages: prompt groups with replacement, then the instances within each drawn group with replacement; instances with byte-identical prompts form one prompt group and are drawn together; 10,000 resamples, seed 0; 95 percent percentile intervals; an asterisk when the interval of a difference excludes 0 |
 | time ratios | geometric mean over instances, standard error of the mean log ratio times the geometric mean |
 | census shares | Wilson 95 percent intervals |
+| first sets (Table 31) | units: the instances with a true joint support (benchmark instances: with a best pair); outcomes of a sample: hit@1 of the language model (0 or 1) and hit@1 of the lookahead order (the share of the family orders under which its first set is a true joint support; benchmark instances: its set is a bound-optimal set); the four joint outcomes are the products of the two, averaged over the samples of an instance and then over the instances; bootstrap as above, with the prompt groups of the text prompt and every instance its own group with every coefficient |
 
 ## Language models
 

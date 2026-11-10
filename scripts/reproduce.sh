@@ -23,6 +23,9 @@
 #   results/paper/figure_data the figure data of these experiments
 #   results/paper/experiments/tab_*.tex   the benchmark tables, the misses of the rich models and the instance
 #             collections in the layout of the paper (llmdw.tables.paper_v1)
+#   results/first_sets/       the first sets of the language models against those of the lookahead orders, and the
+#             interleaved order against its two sources (llmdw.scoring.first_sets); Table 31 in
+#             results/paper/experiments/tab_app_first.tex
 # Named outputs of the tables added in the revision:
 #   Table 18  results/paper/experiments/rich_models_data_vs_five_dual.tex (results/rich_models_data_paired_five_dual.csv)
 #   Table 23  results/paper/experiments/experiment_C_paired_hit1.tex (results/experiment_C/benchmark_paired_hit1.csv,
@@ -127,5 +130,10 @@ done
 for f in experiment_D_tradeoff experiment_E_cost_vs_k search_cost_vs_misses search_cost_vs_misses_after_cut eval_growth \
          rich_cost_by_class_k rich_hit1; do
     [ -s "$FIG/$f.csv" ] || { echo "missing: $FIG/$f.csv"; exit 1; }
+done
+step "first sets of the language models and of the lookahead orders (Table 31)"
+python -m llmdw.scoring.first_sets --data $D --out $R/first_sets --tex-dir $X
+for f in $R/first_sets/first_sets.csv $R/first_sets/evaluations_paired.csv $X/tab_app_first.tex; do
+    [ -s "$f" ] || { echo "missing: $f"; exit 1; }
 done
 step "done"

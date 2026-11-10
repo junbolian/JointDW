@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Download the data of release v1.2 into data/, check it against the SHA-256 recorded below and unpack it.
+# Download the data of release v1.2.1 into data/, check it against the SHA-256 recorded below and unpack it.
 # JOINTDW_DATA_URL overrides the location of the release asset (a directory URL, for example file:///path).
 set -euo pipefail
 cd "$(dirname "$0")/.."
-URL="${JOINTDW_DATA_URL:-https://github.com/junbolian/JointDW/releases/download/v1.2}"
-NAME=jointdw_data_v1.2.tar.gz
-EXPECTED=b23399b2b3a987467277ab78158d31119bae437a4a03a244df7fa8456d9b1ed5
+URL="${JOINTDW_DATA_URL:-https://github.com/junbolian/JointDW/releases/download/v1.2.1}"
+NAME=jointdw_data_v1.2.1.tar.gz
+EXPECTED=cf63f063a95aeb9ec8d997a5cb0038a29edcfdccc87a9ff9415679c7f66bae29
 mkdir -p data
 curl -fsSL -o "data/$NAME" "$URL/$NAME"
 python - "data/$NAME" "$EXPECTED" <<'PY'

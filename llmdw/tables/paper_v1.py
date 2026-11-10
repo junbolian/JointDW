@@ -282,7 +282,8 @@ POSITIONAL = {"tab:llm": "paper/table_01.tex", "tab:search": "paper/table_09.tex
               "tab:app-tradeoff": "experiments/tab_app_tradeoff.tex",
               "tab:app-bench-data": "experiments/tab_app_bench_data.tex",
               "tab:app-misses": "experiments/tab_app_misses.tex", "tab:app-larger": "experiments/tab_app_larger.tex",
-              "tab:instances": "experiments/tab_instances.tex"}
+              "tab:instances": "experiments/tab_instances.tex",
+              "tab:app-first": "experiments/tab_app_first.tex"}       # written by llmdw.scoring.first_sets
 # paper v1.0 printed earlier standard errors in these tables; from paper v1.1 on they carry the values of this release
 STANDARD_ERRORS_BEFORE_V1_1 = ("tab:bench", "tab:app-bench", "tab:app-bench-time", "tab:app-bench-data")
 # the other tables: every printed number is looked for among the values of these result CSVs (relative to RESULTS)
